@@ -127,6 +127,16 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
   return user;
 }
 
+export async function updateProfile(userId, payload) {
+  const user = await User.findByIdAndUpdate(userId, { $set: payload }, { new: true, runValidators: true });
+
+  if (!user) {
+    throw ApiError.notFound('Account not found');
+  }
+
+  return user;
+}
+
 export async function listSessions(userId) {
   return RefreshToken.find({ user: userId, revokedAt: null })
     .sort({ createdAt: -1 })
