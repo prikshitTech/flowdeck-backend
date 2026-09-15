@@ -109,3 +109,9 @@ export const NOTIFICATION_MESSAGES = {
   MARKED_READ: 'Notification marked as read',
   ALL_MARKED_READ: 'Notifications marked as read'
 };
+
+export const SEARCH_MESSAGES = {
+  RESULTS: 'Search completed',
+  SUGGESTIONS: 'Suggestions ready',
+  QUERY_TOO_SHORT: 'Search needs at least two characters'
+};
