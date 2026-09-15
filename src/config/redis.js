@@ -8,7 +8,7 @@ const connections = new Set();
 export function createRedisClient(options = {}) {
   const client = new Redis(env.REDIS_URL, {
     lazyConnect: true,
-    enableOfflineQueue: true,
+    enableOfflineQueue: false,
     maxRetriesPerRequest: 3,
     retryStrategy: (attempt) => Math.min(attempt * 200, 3000),
     ...options

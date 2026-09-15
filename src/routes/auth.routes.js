@@ -3,6 +3,7 @@ import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import authenticate from '../middlewares/authenticate.js';
 import validate from '../middlewares/validate.js';
+import { authLimiter } from '../middlewares/rateLimiter.js';
 import {
   changePasswordSchema,
   loginSchema,
@@ -14,9 +15,9 @@ import {
 
 const router = Router();
 
-router.post('/register', validate(registerSchema), authController.register);
-router.post('/login', validate(loginSchema), authController.login);
-router.post('/refresh', validate(refreshSchema), authController.refresh);
+router.post('/register', authLimiter, validate(registerSchema), authController.register);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
+router.post('/refresh', authLimiter, validate(refreshSchema), authController.refresh);
 router.post('/logout', validate(refreshSchema), authController.logout);
 
 router.use(authenticate);

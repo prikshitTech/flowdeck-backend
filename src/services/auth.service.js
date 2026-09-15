@@ -3,6 +3,7 @@ import ApiError from '../helpers/apiError.js';
 import User from '../models/user.model.js';
 import RefreshToken from '../models/refreshToken.model.js';
 import { AUTH_MESSAGES } from '../constants/messages.js';
+import { assertLoginAllowed, clearLoginFailures, recordLoginFailure } from './security.service.js';
 import {
   hashToken,
   newTokenFamily,
@@ -49,15 +50,20 @@ export async function register(payload, context) {
 }
 
 export async function login({ email, password }, context) {
+  await assertLoginAllowed(email, context.ip);
+
   const user = await User.findOne({ email }).select('+password');
 
   if (!user || !(await user.verifyPassword(password))) {
+    await recordLoginFailure(email, context.ip);
     throw ApiError.unauthorized(AUTH_MESSAGES.INVALID_CREDENTIALS);
   }
 
   if (!user.isActive()) {
     throw ApiError.forbidden(AUTH_MESSAGES.ACCOUNT_NOT_ACTIVE);
   }
+
+  await clearLoginFailures(email, context.ip);
 
   user.lastLoginAt = new Date();
   await user.save();

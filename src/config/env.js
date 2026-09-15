@@ -10,7 +10,14 @@ const schema = z.object({
   JWT_ACCESS_SECRET: z.string().min(24),
   JWT_REFRESH_SECRET: z.string().min(24),
   ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
-  REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(604800)
+  REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(604800),
+  CORS_ORIGINS: z.string().default('*'),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(240),
+  LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(6),
+  LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(300),
+  IP_BLOCK_THRESHOLD: z.coerce.number().int().positive().default(25),
+  IP_BLOCK_SECONDS: z.coerce.number().int().positive().default(1800)
 });
 
 const parsed = schema.safeParse(process.env);
@@ -21,6 +28,9 @@ if (!parsed.success) {
 }
 
 const env = parsed.data;
+
+export const corsOrigins =
+  env.CORS_ORIGINS === '*' ? '*' : env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean);
 
 export const isProduction = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';
