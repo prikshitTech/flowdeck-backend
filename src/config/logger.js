@@ -1,8 +1,8 @@
 import pino from 'pino';
 
-import env, { isProduction } from './env.js';
+import env, { isProduction, isTest } from './env.js';
 
-const transport = isProduction
+const transport = isProduction || isTest
   ? undefined
   : {
       target: 'pino-pretty',
