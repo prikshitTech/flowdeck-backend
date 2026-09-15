@@ -1,9 +1,17 @@
 import { Router } from 'express';
 
+import mongoose from 'mongoose';
+
+import { redis } from '../config/redis.js';
+
 const router = Router();
 
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
+  res.ok({
+    uptime: Math.round(process.uptime()),
+    mongo: mongoose.connection.readyState === 1 ? 'up' : 'down',
+    redis: redis.status === 'ready' ? 'up' : 'down'
+  }, 'Service is healthy');
 });
 
 export default router;
