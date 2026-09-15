@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 import env from '../config/env.js';
 import RateLimitStore from '../helpers/rateLimitStore.js';
@@ -11,7 +11,7 @@ export function createRateLimiter({ name, windowSeconds, max, byUser = false }) 
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     store: new RateLimitStore(`rl:${name}:`),
-    keyGenerator: (req) => (byUser && req.auth ? `user:${req.auth.userId}` : `ip:${req.ip}`),
+    keyGenerator: (req) => (byUser && req.auth ? `user:${req.auth.userId}` : `ip:${ipKeyGenerator(req.ip)}`),
     handler: (req, res) => {
       res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json({
         success: false,
