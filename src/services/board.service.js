@@ -9,6 +9,8 @@ import { BOARD_MESSAGES } from '../constants/messages.js';
 import { CACHE_TTL, cacheKey } from '../constants/cacheKeys.js';
 import { DEFAULT_LISTS } from '../constants/board.js';
 import { JOB, QUEUE } from '../constants/queues.js';
+import { SOCKET_EVENT } from '../constants/events.js';
+import { emitToBoard } from '../sockets/emitter.js';
 import { enqueue } from '../queues/index.js';
 import { fanOutAssignment } from './notification.service.js';
 import { dropByPrefix, remember } from './cache.service.js';
@@ -256,6 +258,8 @@ export async function createCard(workspaceId, boardId, authorId, payload) {
   await invalidate(workspaceId);
   await announceAssignment(card, authorId, payload.assignees);
 
+  emitToBoard(boardId, SOCKET_EVENT.CARD_CREATED, card.toJSON());
+
   return card;
 }
 
@@ -286,6 +290,8 @@ export async function updateCard(workspaceId, boardId, cardId, payload) {
   await card.save();
 
   await invalidate(workspaceId);
+  emitToBoard(boardId, SOCKET_EVENT.CARD_UPDATED, card.toJSON());
+
   return card;
 }
 
@@ -322,6 +328,13 @@ export async function moveCard(workspaceId, boardId, cardId, { list: targetListI
   });
 
   await invalidate(workspaceId);
+  emitToBoard(boardId, SOCKET_EVENT.CARD_MOVED, {
+    id: String(card._id),
+    list: String(card.list),
+    position: card.position,
+    from: String(sourceListId)
+  });
+
   return card;
 }
 
@@ -339,6 +352,8 @@ export async function archiveCard(workspaceId, boardId, cardId) {
   });
 
   await invalidate(workspaceId);
+  emitToBoard(boardId, SOCKET_EVENT.CARD_ARCHIVED, { id: String(card._id), list: String(card.list) });
+
   return { archived: String(card._id) };
 }
 

@@ -5,7 +5,9 @@ import Page from '../models/page.model.js';
 import PageRevision from '../models/pageRevision.model.js';
 import { CACHE_TTL, cacheKey } from '../constants/cacheKeys.js';
 import { PAGE_MESSAGES } from '../constants/messages.js';
+import { SOCKET_EVENT } from '../constants/events.js';
 import { dropByPrefix, remember } from './cache.service.js';
+import { emitToWorkspace } from '../sockets/emitter.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { withId, withIds } from '../helpers/present.js';
 import { withTransaction } from '../helpers/transaction.js';
@@ -172,6 +174,12 @@ export async function updatePage(workspaceId, pageId, editorId, payload) {
   });
 
   await invalidate(workspaceId);
+  emitToWorkspace(workspaceId, SOCKET_EVENT.PAGE_UPDATED, {
+    id: String(updated._id),
+    title: updated.title,
+    version: updated.version
+  });
+
   return updated;
 }
 

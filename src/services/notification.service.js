@@ -6,6 +6,8 @@ import Message from '../models/message.model.js';
 import Notification from '../models/notification.model.js';
 import { AUDIT_ENTITY } from '../constants/audit.js';
 import { NOTIFICATION_MESSAGES } from '../constants/messages.js';
+import { SOCKET_EVENT } from '../constants/events.js';
+import { emitToUser } from '../sockets/emitter.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 
 const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
@@ -25,7 +27,13 @@ async function deliver(entries) {
     return [];
   }
 
-  return Notification.insertMany(targets);
+  const created = await Notification.insertMany(targets);
+
+  for (const notification of created) {
+    emitToUser(notification.user, SOCKET_EVENT.NOTIFICATION_CREATED, notification.toJSON());
+  }
+
+  return created;
 }
 
 export async function fanOutMention({ messageId }) {

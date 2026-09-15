@@ -1,8 +1,11 @@
+import { createServer } from 'node:http';
+
 import app from './app.js';
 import env from './config/env.js';
 import logger from './config/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { connectRedis, disconnectRedis } from './config/redis.js';
+import { createRealtimeServer } from './sockets/index.js';
 import { routeAuditsThroughQueue, scheduleRecurringJobs, startWorkers, stopWorkers } from './queues/bootstrap.js';
 
 async function bootstrap() {
@@ -16,10 +19,14 @@ async function bootstrap() {
     await scheduleRecurringJobs();
   }
 
-  const server = app.listen(env.PORT, () => logger.info(`api listening on port ${env.PORT}`));
+  const server = createServer(app);
+  const realtime = await createRealtimeServer(server);
+
+  server.listen(env.PORT, () => logger.info(`api and realtime listening on port ${env.PORT}`));
 
   const shutdown = async (signal) => {
     logger.info(`${signal} received, shutting down`);
+    await realtime.close();
     server.close();
     await stopWorkers();
     await Promise.allSettled([disconnectDatabase(), disconnectRedis()]);

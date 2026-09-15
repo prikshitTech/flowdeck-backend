@@ -10,6 +10,8 @@ import { CHANNEL_MESSAGES } from '../constants/messages.js';
 import { dropByPrefix } from './cache.service.js';
 import { cacheKey } from '../constants/cacheKeys.js';
 import { JOB, QUEUE } from '../constants/queues.js';
+import { SOCKET_EVENT } from '../constants/events.js';
+import { emitToChannel } from '../sockets/emitter.js';
 import { enqueue } from '../queues/index.js';
 import { fanOutMention } from './notification.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
@@ -284,6 +286,8 @@ export async function sendMessage(workspaceId, channelId, authorId, payload) {
   await message.populate('author', 'name email avatarUrl');
   await invalidate(workspaceId);
 
+  emitToChannel(channel._id, SOCKET_EVENT.MESSAGE_CREATED, message.toJSON());
+
   if (message.mentions.length > 0) {
     await enqueue(
       QUEUE.NOTIFICATION,
@@ -317,6 +321,8 @@ export async function editMessage(workspaceId, channelId, messageId, userId, bod
   message.set({ body, editedAt: new Date() });
   await message.save();
 
+  emitToChannel(channel._id, SOCKET_EVENT.MESSAGE_UPDATED, message.toJSON());
+
   return message;
 }
 
@@ -334,6 +340,8 @@ export async function deleteMessage(workspaceId, channelId, messageId, userId) {
       await Message.updateOne({ _id: message.parent }, { $inc: { replyCount: -1 } }, { session });
     }
   });
+
+  emitToChannel(channel._id, SOCKET_EVENT.MESSAGE_DELETED, { id: String(message._id) });
 
   return { deleted: String(message._id) };
 }
@@ -363,5 +371,8 @@ export async function toggleReaction(workspaceId, channelId, messageId, userId, 
   message.reactions = message.reactions.filter((reaction) => reaction.users.length > 0);
   await message.save();
 
-  return withId(message.toObject());
+  const payload = withId(message.toObject());
+  emitToChannel(channel._id, SOCKET_EVENT.REACTION_UPDATED, payload);
+
+  return payload;
 }
