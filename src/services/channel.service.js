@@ -9,6 +9,9 @@ import { ALLOWED_REACTIONS, CHANNEL_VISIBILITY } from '../constants/channel.js';
 import { CHANNEL_MESSAGES } from '../constants/messages.js';
 import { dropByPrefix } from './cache.service.js';
 import { cacheKey } from '../constants/cacheKeys.js';
+import { JOB, QUEUE } from '../constants/queues.js';
+import { enqueue } from '../queues/index.js';
+import { fanOutMention } from './notification.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { slugify } from '../helpers/slug.js';
 import { withId, withIds } from '../helpers/present.js';
@@ -280,6 +283,15 @@ export async function sendMessage(workspaceId, channelId, authorId, payload) {
 
   await message.populate('author', 'name email avatarUrl');
   await invalidate(workspaceId);
+
+  if (message.mentions.length > 0) {
+    await enqueue(
+      QUEUE.NOTIFICATION,
+      JOB.MENTION_FAN_OUT,
+      { messageId: String(message._id) },
+      { runInline: fanOutMention }
+    );
+  }
 
   return message;
 }

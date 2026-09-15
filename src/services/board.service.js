@@ -8,6 +8,9 @@ import Membership from '../models/membership.model.js';
 import { BOARD_MESSAGES } from '../constants/messages.js';
 import { CACHE_TTL, cacheKey } from '../constants/cacheKeys.js';
 import { DEFAULT_LISTS } from '../constants/board.js';
+import { JOB, QUEUE } from '../constants/queues.js';
+import { enqueue } from '../queues/index.js';
+import { fanOutAssignment } from './notification.service.js';
 import { dropByPrefix, remember } from './cache.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { withTransaction } from '../helpers/transaction.js';
@@ -251,7 +254,22 @@ export async function createCard(workspaceId, boardId, authorId, payload) {
   });
 
   await invalidate(workspaceId);
+  await announceAssignment(card, authorId, payload.assignees);
+
   return card;
+}
+
+async function announceAssignment(card, actorId, assignees) {
+  if (!assignees?.length) {
+    return;
+  }
+
+  await enqueue(
+    QUEUE.NOTIFICATION,
+    JOB.CARD_ASSIGNED,
+    { cardId: String(card._id), actorId: String(actorId), assignees: assignees.map(String) },
+    { runInline: fanOutAssignment }
+  );
 }
 
 export async function updateCard(workspaceId, boardId, cardId, payload) {
