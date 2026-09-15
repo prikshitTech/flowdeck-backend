@@ -2,6 +2,8 @@ import { HTTP_STATUS } from '../constants/statusCodes.js';
 import { COMMON_MESSAGES } from '../constants/messages.js';
 
 function build(res, statusCode, message, data, meta) {
+  res.locals.payload = data;
+
   const body = { success: statusCode < HTTP_STATUS.BAD_REQUEST, message, data };
 
   if (meta) {
