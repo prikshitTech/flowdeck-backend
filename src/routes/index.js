@@ -3,6 +3,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 
 import authRoutes from './auth.routes.js';
+import auditRoutes from './audit.routes.js';
 import boardRoutes from './board.routes.js';
 import channelRoutes from './channel.routes.js';
 import pageRoutes from './page.routes.js';
@@ -26,6 +27,7 @@ router.use('/auth', authRoutes);
 router.use('/workspaces/:workspaceId/pages', pageRoutes);
 router.use('/workspaces/:workspaceId/boards', boardRoutes);
 router.use('/workspaces/:workspaceId/channels', channelRoutes);
+router.use('/workspaces/:workspaceId/audit-logs', auditRoutes);
 router.use('/workspaces', workspaceRoutes);
 
 export default router;
