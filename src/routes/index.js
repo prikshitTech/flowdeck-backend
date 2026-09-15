@@ -3,6 +3,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 
 import authRoutes from './auth.routes.js';
+import boardRoutes from './board.routes.js';
 import pageRoutes from './page.routes.js';
 import workspaceRoutes from './workspace.routes.js';
 import { redis } from '../config/redis.js';
@@ -22,6 +23,7 @@ router.get('/health', (req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/workspaces/:workspaceId/pages', pageRoutes);
+router.use('/workspaces/:workspaceId/boards', boardRoutes);
 router.use('/workspaces', workspaceRoutes);
 
 export default router;
