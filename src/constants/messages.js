@@ -65,3 +65,21 @@ export const PAGE_MESSAGES = {
   CANNOT_NEST_IN_SELF: 'A page cannot be nested inside itself',
   CANNOT_NEST_IN_DESCENDANT: 'A page cannot be nested inside one of its own children'
 };
+
+export const BOARD_MESSAGES = {
+  CREATED: 'Board created successfully',
+  UPDATED: 'Board updated successfully',
+  ARCHIVED: 'Board archived successfully',
+  NOT_FOUND: 'Board not found',
+  LIST_CREATED: 'List created successfully',
+  LIST_UPDATED: 'List updated successfully',
+  LIST_ARCHIVED: 'List archived successfully',
+  LIST_NOT_FOUND: 'List not found on this board',
+  LIST_FULL: 'This list has reached its card limit',
+  CARD_CREATED: 'Card created successfully',
+  CARD_UPDATED: 'Card updated successfully',
+  CARD_MOVED: 'Card moved successfully',
+  CARD_ARCHIVED: 'Card archived successfully',
+  CARD_NOT_FOUND: 'Card not found on this board',
+  ASSIGNEE_NOT_MEMBER: 'Cards can only be assigned to workspace members'
+};
