@@ -103,3 +103,9 @@ export const CHANNEL_MESSAGES = {
   NOT_MESSAGE_AUTHOR: 'You can only change your own messages',
   REACTION_UPDATED: 'Reaction updated'
 };
+
+export const NOTIFICATION_MESSAGES = {
+  NOT_FOUND: 'Notification not found',
+  MARKED_READ: 'Notification marked as read',
+  ALL_MARKED_READ: 'Notifications marked as read'
+};
