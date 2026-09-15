@@ -4,7 +4,6 @@ import env from './env.js';
 import logger from './logger.js';
 
 mongoose.set('strictQuery', true);
-mongoose.set('sanitizeFilter', true);
 
 export async function connectDatabase() {
   mongoose.connection.on('disconnected', () => logger.warn('mongo disconnected'));
