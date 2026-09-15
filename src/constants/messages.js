@@ -51,3 +51,17 @@ export const WORKSPACE_MESSAGES = {
   OWNERSHIP_TRANSFERRED: 'Ownership transferred successfully',
   USER_NOT_FOUND: 'No account exists with that email'
 };
+
+export const PAGE_MESSAGES = {
+  CREATED: 'Page created successfully',
+  UPDATED: 'Page updated successfully',
+  MOVED: 'Page moved successfully',
+  REORDERED: 'Pages reordered successfully',
+  ARCHIVED: 'Page archived successfully',
+  RESTORED: 'Page restored to the selected revision',
+  NOT_FOUND: 'Page not found',
+  REVISION_NOT_FOUND: 'That revision does not exist for this page',
+  TOO_DEEP: 'Pages cannot be nested any deeper',
+  CANNOT_NEST_IN_SELF: 'A page cannot be nested inside itself',
+  CANNOT_NEST_IN_DESCENDANT: 'A page cannot be nested inside one of its own children'
+};
