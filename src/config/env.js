@@ -6,7 +6,11 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   MONGO_URI: z.string().min(1),
-  REDIS_URL: z.string().min(1)
+  REDIS_URL: z.string().min(1),
+  JWT_ACCESS_SECRET: z.string().min(24),
+  JWT_REFRESH_SECRET: z.string().min(24),
+  ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
+  REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(604800)
 });
 
 const parsed = schema.safeParse(process.env);

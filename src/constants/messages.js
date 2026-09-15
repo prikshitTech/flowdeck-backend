@@ -10,3 +10,20 @@ export const COMMON_MESSAGES = {
   UPDATED: 'Updated successfully',
   DELETED: 'Deleted successfully'
 };
+
+export const AUTH_MESSAGES = {
+  REGISTERED: 'Account created successfully',
+  LOGGED_IN: 'Logged in successfully',
+  LOGGED_OUT: 'Logged out successfully',
+  TOKEN_REFRESHED: 'Session refreshed successfully',
+  PASSWORD_CHANGED: 'Password updated successfully',
+  PROFILE_UPDATED: 'Profile updated successfully',
+  EMAIL_TAKEN: 'An account with this email already exists',
+  INVALID_CREDENTIALS: 'Email or password is incorrect',
+  ACCOUNT_NOT_ACTIVE: 'This account is not active, please contact support',
+  REFRESH_TOKEN_REQUIRED: 'A refresh token is required',
+  REFRESH_TOKEN_INVALID: 'Refresh token is invalid or has already been used',
+  CURRENT_PASSWORD_WRONG: 'Current password is incorrect',
+  SESSION_NOT_FOUND: 'Session not found',
+  SESSIONS_REVOKED: 'All other sessions were revoked'
+};
