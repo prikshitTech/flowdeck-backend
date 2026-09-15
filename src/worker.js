@@ -1,26 +1,17 @@
-import app from './app.js';
-import env from './config/env.js';
 import logger from './config/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { connectRedis, disconnectRedis } from './config/redis.js';
-import { routeAuditsThroughQueue, scheduleRecurringJobs, startWorkers, stopWorkers } from './queues/bootstrap.js';
+import { scheduleRecurringJobs, startWorkers, stopWorkers } from './queues/bootstrap.js';
 
 async function bootstrap() {
   await connectDatabase();
   await connectRedis();
 
-  routeAuditsThroughQueue();
-
-  if (env.RUN_WORKERS_IN_API) {
-    startWorkers();
-    await scheduleRecurringJobs();
-  }
-
-  const server = app.listen(env.PORT, () => logger.info(`api listening on port ${env.PORT}`));
+  startWorkers();
+  await scheduleRecurringJobs();
 
   const shutdown = async (signal) => {
-    logger.info(`${signal} received, shutting down`);
-    server.close();
+    logger.info(`${signal} received, stopping workers`);
     await stopWorkers();
     await Promise.allSettled([disconnectDatabase(), disconnectRedis()]);
     process.exit(0);
@@ -31,6 +22,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error) => {
-  logger.fatal({ err: error }, 'failed to start api');
+  logger.fatal({ err: error }, 'failed to start workers');
   process.exit(1);
 });

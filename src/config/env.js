@@ -17,7 +17,11 @@ const schema = z.object({
   LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(6),
   LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(300),
   IP_BLOCK_THRESHOLD: z.coerce.number().int().positive().default(25),
-  IP_BLOCK_SECONDS: z.coerce.number().int().positive().default(1800)
+  IP_BLOCK_SECONDS: z.coerce.number().int().positive().default(1800),
+  RUN_WORKERS_IN_API: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true')
 });
 
 const parsed = schema.safeParse(process.env);
