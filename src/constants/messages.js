@@ -32,3 +32,22 @@ export const AUTH_MESSAGES = {
   PASSWORD_ROTATED: 'Password was changed, please sign in again',
   ROLE_NOT_ALLOWED: 'Your role does not allow this action'
 };
+
+export const WORKSPACE_MESSAGES = {
+  CREATED: 'Workspace created successfully',
+  UPDATED: 'Workspace updated successfully',
+  ARCHIVED: 'Workspace archived successfully',
+  DELETED: 'Workspace deleted successfully',
+  NOT_FOUND: 'Workspace not found',
+  NOT_A_MEMBER: 'You are not a member of this workspace',
+  ROLE_TOO_LOW: 'Your workspace role does not allow this action',
+  MEMBER_ADDED: 'Member added successfully',
+  MEMBER_UPDATED: 'Member role updated successfully',
+  MEMBER_REMOVED: 'Member removed successfully',
+  MEMBER_EXISTS: 'This user is already a member of the workspace',
+  MEMBER_NOT_FOUND: 'Member not found in this workspace',
+  OWNER_ROLE_LOCKED: 'The workspace owner role can only change through a transfer',
+  OWNER_CANNOT_LEAVE: 'Transfer ownership before leaving the workspace',
+  OWNERSHIP_TRANSFERRED: 'Ownership transferred successfully',
+  USER_NOT_FOUND: 'No account exists with that email'
+};
