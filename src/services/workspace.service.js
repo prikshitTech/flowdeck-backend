@@ -78,7 +78,7 @@ export async function updateWorkspace(workspaceId, payload) {
   const workspace = await Workspace.findByIdAndUpdate(
     workspaceId,
     { $set: payload },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!workspace) {
@@ -93,7 +93,7 @@ export async function archiveWorkspace(workspaceId) {
   const workspace = await Workspace.findByIdAndUpdate(
     workspaceId,
     { $set: { archivedAt: new Date() } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!workspace) {

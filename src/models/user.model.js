@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: Object.values(SYSTEM_ROLE), default: SYSTEM_ROLE.USER },
     status: { type: String, enum: Object.values(ACCOUNT_STATUS), default: ACCOUNT_STATUS.ACTIVE },
     lastLoginAt: { type: Date, default: null },
-    passwordChangedAt: { type: Date, default: null }
+    passwordChangedAt: { type: Date, default: null },
+    tokenVersion: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

@@ -29,7 +29,7 @@ export const AUTH_MESSAGES = {
   TOKEN_MISSING: 'Authorization header with a bearer token is required',
   TOKEN_INVALID: 'Access token is invalid',
   TOKEN_EXPIRED: 'Access token has expired',
-  PASSWORD_ROTATED: 'Password was changed, please sign in again',
+  SESSION_REVOKED: 'This session is no longer valid, please sign in again',
   ROLE_NOT_ALLOWED: 'Your role does not allow this action'
 };
 

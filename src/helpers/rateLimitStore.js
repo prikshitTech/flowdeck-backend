@@ -11,7 +11,7 @@ export default class RateLimitStore {
   }
 
   async increment(key) {
-    const totalHits = await bump(this.prefix + key, this.windowSeconds);
+    const totalHits = (await bump(this.prefix + key, this.windowSeconds)) || 1;
 
     return { totalHits, resetTime: new Date(Date.now() + this.windowSeconds * 1000) };
   }

@@ -11,7 +11,7 @@ export function hashToken(token) {
 }
 
 export function signAccessToken(user) {
-  return jwt.sign({ sub: String(user._id), role: user.role }, env.JWT_ACCESS_SECRET, {
+  return jwt.sign({ sub: String(user._id), role: user.role, ver: user.tokenVersion ?? 0 }, env.JWT_ACCESS_SECRET, {
     issuer: ISSUER,
     expiresIn: env.ACCESS_TOKEN_TTL
   });

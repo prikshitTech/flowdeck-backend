@@ -116,6 +116,8 @@ export async function logoutEverywhere(userId) {
     { $set: { revokedAt: new Date() } }
   );
 
+  await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+
   return { revoked: result.modifiedCount };
 }
 
@@ -134,7 +136,7 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
 }
 
 export async function updateProfile(userId, payload) {
-  const user = await User.findByIdAndUpdate(userId, { $set: payload }, { new: true, runValidators: true });
+  const user = await User.findByIdAndUpdate(userId, { $set: payload }, { returnDocument: 'after', runValidators: true });
 
   if (!user) {
     throw ApiError.notFound('Account not found');
@@ -153,7 +155,7 @@ export async function revokeSession(userId, sessionId) {
   const session = await RefreshToken.findOneAndUpdate(
     { _id: sessionId, user: userId, revokedAt: null },
     { $set: { revokedAt: new Date() } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!session) {

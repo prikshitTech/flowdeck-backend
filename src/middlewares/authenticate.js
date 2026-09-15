@@ -7,14 +7,6 @@ import { AUTH_MESSAGES } from '../constants/messages.js';
 import { bearerToken } from '../helpers/requestContext.js';
 import { verifyAccessToken } from '../helpers/token.js';
 
-function passwordRotatedAfter(user, issuedAtSeconds) {
-  if (!user.passwordChangedAt) {
-    return false;
-  }
-
-  return Math.floor(user.passwordChangedAt.getTime() / 1000) > issuedAtSeconds;
-}
-
 function readClaims(token) {
   try {
     return verifyAccessToken(token);
@@ -45,8 +37,8 @@ const authenticate = asyncHandler(async (req, res, next) => {
     throw ApiError.forbidden(AUTH_MESSAGES.ACCOUNT_NOT_ACTIVE);
   }
 
-  if (passwordRotatedAfter(user, claims.iat)) {
-    throw ApiError.unauthorized(AUTH_MESSAGES.PASSWORD_ROTATED);
+  if ((claims.ver ?? 0) !== user.tokenVersion) {
+    throw ApiError.unauthorized(AUTH_MESSAGES.SESSION_REVOKED);
   }
 
   req.user = user;
