@@ -25,5 +25,10 @@ export const AUTH_MESSAGES = {
   REFRESH_TOKEN_INVALID: 'Refresh token is invalid or has already been used',
   CURRENT_PASSWORD_WRONG: 'Current password is incorrect',
   SESSION_NOT_FOUND: 'Session not found',
-  SESSIONS_REVOKED: 'All other sessions were revoked'
+  SESSIONS_REVOKED: 'All other sessions were revoked',
+  TOKEN_MISSING: 'Authorization header with a bearer token is required',
+  TOKEN_INVALID: 'Access token is invalid',
+  TOKEN_EXPIRED: 'Access token has expired',
+  PASSWORD_ROTATED: 'Password was changed, please sign in again',
+  ROLE_NOT_ALLOWED: 'Your role does not allow this action'
 };
