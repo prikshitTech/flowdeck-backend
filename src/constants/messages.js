@@ -83,3 +83,23 @@ export const BOARD_MESSAGES = {
   CARD_NOT_FOUND: 'Card not found on this board',
   ASSIGNEE_NOT_MEMBER: 'Cards can only be assigned to workspace members'
 };
+
+export const CHANNEL_MESSAGES = {
+  CREATED: 'Channel created successfully',
+  UPDATED: 'Channel updated successfully',
+  ARCHIVED: 'Channel archived successfully',
+  JOINED: 'Joined the channel',
+  LEFT: 'Left the channel',
+  READ: 'Channel marked as read',
+  NOT_FOUND: 'Channel not found',
+  NAME_TAKEN: 'A channel with this name already exists in the workspace',
+  PRIVATE_ACCESS: 'This channel is private, ask a member to invite you',
+  ALREADY_JOINED: 'You are already in this channel',
+  NOT_JOINED: 'Join the channel before posting',
+  MESSAGE_SENT: 'Message sent',
+  MESSAGE_UPDATED: 'Message updated',
+  MESSAGE_DELETED: 'Message deleted',
+  MESSAGE_NOT_FOUND: 'Message not found',
+  NOT_MESSAGE_AUTHOR: 'You can only change your own messages',
+  REACTION_UPDATED: 'Reaction updated'
+};
