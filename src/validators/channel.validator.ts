@@ -11,7 +11,7 @@ export const createChannelSchema = {
   body: z.object({
     name: shortText(60),
     topic: z.string().trim().max(200).optional(),
-    visibility: z.enum(Object.values(CHANNEL_VISIBILITY)).default(CHANNEL_VISIBILITY.PUBLIC)
+    visibility: z.enum(CHANNEL_VISIBILITY).default(CHANNEL_VISIBILITY.PUBLIC)
   })
 };
 
@@ -35,7 +35,7 @@ export const updateChannelSchema = {
     .object({
       name: shortText(60).optional(),
       topic: z.string().trim().max(200).optional(),
-      visibility: z.enum(Object.values(CHANNEL_VISIBILITY)).optional()
+      visibility: z.enum(CHANNEL_VISIBILITY).optional()
     })
     .refine((value) => Object.keys(value).length > 0, { message: 'Nothing to update' })
 };
@@ -72,3 +72,9 @@ export const reactionSchema = {
   params: z.object({ ...channelParams, messageId: objectId }),
   body: z.object({ emoji: z.enum(ALLOWED_REACTIONS) })
 };
+
+export type CreateChannelInput = z.infer<typeof createChannelSchema.body>;
+export type ListChannelsQuery = z.infer<typeof listChannelsSchema.query>;
+export type UpdateChannelInput = z.infer<typeof updateChannelSchema.body>;
+export type ListMessagesQuery = z.infer<typeof listMessagesSchema.query>;
+export type SendMessageInput = z.infer<typeof sendMessageSchema.body>;

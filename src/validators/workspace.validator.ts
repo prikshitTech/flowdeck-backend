@@ -56,3 +56,9 @@ export const transferOwnershipSchema = {
   params: z.object({ workspaceId: objectId }),
   body: z.object({ memberId: objectId })
 };
+
+export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema.body>;
+export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema.body>;
+export type ListWorkspacesQuery = z.infer<typeof listWorkspacesSchema.query>;
+export type ListMembersQuery = z.infer<typeof listMembersSchema.query>;
+export type AddMemberInput = z.infer<typeof addMemberSchema.body>;

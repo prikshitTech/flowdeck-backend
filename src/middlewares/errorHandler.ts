@@ -1,3 +1,4 @@
+import type { ErrorRequestHandler } from 'express';
 import mongoose from 'mongoose';
 import { ZodError } from 'zod';
 
@@ -9,7 +10,22 @@ import { ERROR_CODE, HTTP_STATUS } from '../constants/statusCodes.js';
 
 const DUPLICATE_KEY = 11000;
 
-function translate(error) {
+interface DriverError {
+  code?: number;
+  keyPattern?: Record<string, unknown>;
+  type?: string;
+  stack?: string;
+}
+
+interface ErrorBody {
+  success: false;
+  message: string;
+  code: string;
+  details: unknown;
+  stack?: string;
+}
+
+function translate(error: unknown): ApiError {
   if (error instanceof ApiError) {
     return error;
   }
@@ -28,26 +44,28 @@ function translate(error) {
     return ApiError.badRequest(COMMON_MESSAGES.INVALID_IDENTIFIER, ERROR_CODE.INVALID_IDENTIFIER);
   }
 
-  if (error?.code === DUPLICATE_KEY) {
-    const field = Object.keys(error.keyPattern ?? {}).join(', ');
+  const driverError = error as DriverError | null;
+
+  if (driverError?.code === DUPLICATE_KEY) {
+    const field = Object.keys(driverError.keyPattern ?? {}).join(', ');
     return ApiError.conflict(field ? `${field} is already taken` : COMMON_MESSAGES.DUPLICATE_RESOURCE);
   }
 
-  if (error?.type === 'entity.too.large') {
+  if (driverError?.type === 'entity.too.large') {
     return new ApiError(HTTP_STATUS.PAYLOAD_TOO_LARGE, 'Request body is too large', ERROR_CODE.VALIDATION_FAILED);
   }
 
   return new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, COMMON_MESSAGES.INTERNAL_ERROR, ERROR_CODE.INTERNAL);
 }
 
-export default function errorHandler(error, req, res, next) {
+const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const normalized = translate(error);
 
   if (normalized.statusCode >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
     logger.error({ err: error, path: req.originalUrl, method: req.method }, 'unhandled request failure');
   }
 
-  const body = {
+  const body: ErrorBody = {
     success: false,
     message: normalized.message,
     code: normalized.code,
@@ -55,8 +73,10 @@ export default function errorHandler(error, req, res, next) {
   };
 
   if (!isProduction && normalized.statusCode >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
-    body.stack = error.stack;
+    body.stack = (error as DriverError | null)?.stack;
   }
 
   res.status(normalized.statusCode).json(body);
-}
+};
+
+export default errorHandler;

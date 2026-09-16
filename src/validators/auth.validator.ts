@@ -42,3 +42,8 @@ export const updateProfileSchema = {
 export const sessionParamsSchema = {
   params: z.object({ sessionId: objectId })
 };
+
+export type RegisterInput = z.infer<typeof registerSchema.body>;
+export type LoginInput = z.infer<typeof loginSchema.body>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema.body>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema.body>;

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { objectId, paginationQuery } from './common.validator.js';
 
-const KINDS = ['page', 'card', 'message'];
+const KINDS: string[] = ['page', 'card', 'message'];
 
 export const searchSchema = {
   params: z.object({ workspaceId: objectId }),
@@ -31,3 +31,5 @@ export const overviewSchema = {
 export const boardAnalyticsSchema = {
   params: z.object({ workspaceId: objectId, boardId: objectId })
 };
+
+export type SearchQuery = z.infer<typeof searchSchema.query>;

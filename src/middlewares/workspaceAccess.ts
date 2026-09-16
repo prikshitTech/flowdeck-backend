@@ -1,30 +1,31 @@
 import ApiError from '../helpers/apiError.js';
 import asyncHandler from '../helpers/asyncHandler.js';
 import Membership from '../models/membership.model.js';
+import type { MembershipContext } from '../types/express.js';
 import { CACHE_TTL } from '../constants/cacheKeys.js';
 import { WORKSPACE_MESSAGES } from '../constants/messages.js';
-import { WORKSPACE_ROLE_RANK } from '../constants/roles.js';
+import { WORKSPACE_ROLE_RANK, type WorkspaceRole } from '../constants/roles.js';
 import { drop, remember } from '../services/cache.service.js';
 
-const membershipKey = (workspaceId, userId) => `cache:membership:${workspaceId}:${userId}`;
+const membershipKey = (workspaceId: string, userId: string) => `cache:membership:${workspaceId}:${userId}`;
 
-export function loadMembership(workspaceId, userId) {
-  return remember(membershipKey(workspaceId, userId), CACHE_TTL.MEDIUM, async () => {
+export function loadMembership(workspaceId: string, userId: string): Promise<MembershipContext | false> {
+  return remember<MembershipContext | false>(membershipKey(workspaceId, userId), CACHE_TTL.MEDIUM, async () => {
     const membership = await Membership.findOne({ workspace: workspaceId, user: userId })
       .select('role workspace user')
       .lean();
 
-    return membership ? { role: membership.role, workspace: String(membership.workspace) } : false;
+    return membership ? { role: membership.role as WorkspaceRole, workspace: String(membership.workspace) } : false;
   });
 }
 
-export function forgetMembership(workspaceId, userId) {
+export function forgetMembership(workspaceId: string, userId: string) {
   return drop(membershipKey(workspaceId, userId));
 }
 
-export function requireWorkspaceRole(minimumRole) {
-  return asyncHandler(async (req, res, next) => {
-    const workspaceId = req.params.workspaceId ?? req.body.workspaceId;
+export function requireWorkspaceRole(minimumRole: WorkspaceRole) {
+  return asyncHandler(async (req, _res, next) => {
+    const workspaceId: string | undefined = req.params.workspaceId ?? req.body?.workspaceId;
 
     if (!workspaceId) {
       throw ApiError.badRequest('A workspace identifier is required');
@@ -43,6 +44,6 @@ export function requireWorkspaceRole(minimumRole) {
     req.workspaceId = String(workspaceId);
     req.membership = membership;
 
-    return next();
+    next();
   });
 }

@@ -65,3 +65,10 @@ export const listRevisionsSchema = {
 export const restoreRevisionSchema = {
   params: z.object({ ...pageParams, version: z.coerce.number().int().positive() })
 };
+
+export type CreatePageInput = z.infer<typeof createPageSchema.body>;
+export type ListPagesQuery = z.infer<typeof listPagesSchema.query>;
+export type UpdatePageInput = z.infer<typeof updatePageSchema.body>;
+export type MovePageInput = z.infer<typeof movePageSchema.body>;
+export type ReorderPagesInput = z.infer<typeof reorderPagesSchema.body>;
+export type ListRevisionsQuery = z.infer<typeof listRevisionsSchema.query>;

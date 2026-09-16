@@ -1,11 +1,13 @@
+import type { RequestHandler } from 'express';
+
 import ApiError from '../helpers/apiError.js';
 import { AUTH_MESSAGES } from '../constants/messages.js';
-import { SYSTEM_ROLE } from '../constants/roles.js';
+import { SYSTEM_ROLE, type SystemRole } from '../constants/roles.js';
 
-export function requireRole(...roles) {
-  const allowed = new Set(roles);
+export function requireRole(...roles: SystemRole[]): RequestHandler {
+  const allowed = new Set<string>(roles);
 
-  return (req, res, next) => {
+  return (req, _res, next) => {
     if (!req.user) {
       return next(ApiError.unauthorized(AUTH_MESSAGES.TOKEN_MISSING));
     }

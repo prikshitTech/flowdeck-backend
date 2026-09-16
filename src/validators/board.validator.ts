@@ -66,7 +66,7 @@ export const createCardSchema = {
     list: objectId,
     title: shortText(200),
     description: z.string().trim().max(8000).optional(),
-    priority: z.enum(Object.values(CARD_PRIORITY)).optional(),
+    priority: z.enum(CARD_PRIORITY).optional(),
     labels: z.array(label).max(10).optional(),
     assignees: z.array(objectId).max(20).optional(),
     dueAt: z.coerce.date().optional()
@@ -83,7 +83,7 @@ export const updateCardSchema = {
     .object({
       title: shortText(200).optional(),
       description: z.string().trim().max(8000).optional(),
-      priority: z.enum(Object.values(CARD_PRIORITY)).optional(),
+      priority: z.enum(CARD_PRIORITY).optional(),
       labels: z.array(label).max(10).optional(),
       assignees: z.array(objectId).max(20).optional(),
       dueAt: z.coerce.date().nullable().optional(),
@@ -106,10 +106,20 @@ export const listCardsSchema = {
     list: objectId.optional(),
     assignee: objectId.optional(),
     label: label.optional(),
-    priority: z.enum(Object.values(CARD_PRIORITY)).optional(),
+    priority: z.enum(CARD_PRIORITY).optional(),
     overdue: z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
       .optional()
   })
 };
+
+export type CreateBoardInput = z.infer<typeof createBoardSchema.body>;
+export type ListBoardsQuery = z.infer<typeof listBoardsSchema.query>;
+export type UpdateBoardInput = z.infer<typeof updateBoardSchema.body>;
+export type CreateListInput = z.infer<typeof createListSchema.body>;
+export type UpdateListInput = z.infer<typeof updateListSchema.body>;
+export type CreateCardInput = z.infer<typeof createCardSchema.body>;
+export type UpdateCardInput = z.infer<typeof updateCardSchema.body>;
+export type MoveCardInput = z.infer<typeof moveCardSchema.body>;
+export type ListCardsQuery = z.infer<typeof listCardsSchema.query>;

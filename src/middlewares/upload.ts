@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createWriteStream } from 'node:fs';
 import { mkdir, unlink } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
+import type { Request } from 'express';
 
 import busboy from 'busboy';
 
@@ -10,33 +11,39 @@ import ApiError from '../helpers/apiError.js';
 import asyncHandler from '../helpers/asyncHandler.js';
 import env from '../config/env.js';
 import logger from '../config/logger.js';
+import type { UploadedFile } from '../types/express.js';
 import { ALLOWED_UPLOAD_TYPES, FILE_MESSAGES } from '../constants/files.js';
 
 const BYTES_PER_MB = 1024 * 1024;
 
-function safeExtension(filename) {
+interface Received {
+  file: UploadedFile;
+  fields: Record<string, string>;
+}
+
+function safeExtension(filename: string): string {
   const extension = path.extname(filename).toLowerCase();
 
   return extension.length > 1 && extension.length <= 10 ? extension : '';
 }
 
-async function discard(target) {
+async function discard(target: string | undefined): Promise<void> {
   if (target) {
     await unlink(target).catch(() => undefined);
   }
 }
 
-function receive(req, directory, field) {
+function receive(req: Request, directory: string, field: string): Promise<Received> {
   return new Promise((resolve, reject) => {
     const parser = busboy({
       headers: req.headers,
       limits: { files: 1, fields: 12, fileSize: env.MAX_UPLOAD_MB * BYTES_PER_MB }
     });
 
-    const fields = {};
-    let writing = Promise.resolve();
-    let received = null;
-    let failure = null;
+    const fields: Record<string, string> = {};
+    let writing: Promise<void> = Promise.resolve();
+    let received: UploadedFile | null = null;
+    let failure: ApiError | null = null;
 
     parser.on('field', (name, value) => {
       fields[name] = value;
@@ -59,7 +66,7 @@ function receive(req, directory, field) {
       const digest = crypto.createHash('sha256');
       let size = 0;
 
-      stream.on('data', (chunk) => {
+      stream.on('data', (chunk: Buffer) => {
         size += chunk.length;
         digest.update(chunk);
       });
@@ -130,6 +137,6 @@ export default function streamUpload(field = 'file') {
       }
     });
 
-    return next();
+    next();
   });
 }

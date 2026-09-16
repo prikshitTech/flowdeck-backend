@@ -1,18 +1,26 @@
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 
 import env from '../config/env.js';
 import RateLimitStore from '../helpers/rateLimitStore.js';
 import { ERROR_CODE, HTTP_STATUS } from '../constants/statusCodes.js';
 
-export function createRateLimiter({ name, windowSeconds, max, byUser = false }) {
+interface LimiterOptions {
+  name: string;
+  windowSeconds: number;
+  max: number;
+  byUser?: boolean;
+}
+
+export function createRateLimiter({ name, windowSeconds, max, byUser = false }: LimiterOptions) {
   return rateLimit({
     windowMs: windowSeconds * 1000,
     limit: max,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     store: new RateLimitStore(`rl:${name}:`),
-    keyGenerator: (req) => (byUser && req.auth ? `user:${req.auth.userId}` : `ip:${ipKeyGenerator(req.ip)}`),
-    handler: (req, res) => {
+    keyGenerator: (req) =>
+      byUser && req.auth ? `user:${req.auth.userId}` : `ip:${ipKeyGenerator(req.ip ?? 'unknown')}`,
+    handler: (_req, res) => {
       res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json({
         success: false,
         message: 'Too many requests, please slow down',

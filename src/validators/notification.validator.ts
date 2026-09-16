@@ -19,3 +19,5 @@ export const notificationParamsSchema = {
 export const markAllReadSchema = {
   body: z.object({ workspace: objectId.optional() })
 };
+
+export type ListNotificationsQuery = z.infer<typeof listNotificationsSchema.query>;
