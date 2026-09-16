@@ -1,4 +1,4 @@
-import { api, setupWorkspace } from './helpers/factory.js';
+import { api, setupWorkspace, type Row } from './helpers/factory.js';
 
 describe('pages', () => {
   it('creates a page and blocks viewers from writing', async () => {
@@ -40,7 +40,7 @@ describe('pages', () => {
     expect(tree.body.data[0].children[0].children[0].title).toBe('Day One');
 
     const detail = await api().get(url(`/pages/${grandchild.body.data.id}`)).set(owner.headers);
-    expect(detail.body.data.breadcrumb.map((row) => row.title)).toEqual(['Handbook', 'Onboarding']);
+    expect(detail.body.data.breadcrumb.map((row: Row) => row.title)).toEqual(['Handbook', 'Onboarding']);
   });
 
   it('snapshots a revision on every edit and restores an earlier one', async () => {
@@ -52,7 +52,7 @@ describe('pages', () => {
     await api().patch(url(`/pages/${pageId}`)).set(owner.headers).send({ body: 'v3' });
 
     const revisions = await api().get(url(`/pages/${pageId}/revisions`)).set(owner.headers);
-    expect(revisions.body.data.map((row) => row.version)).toEqual([2, 1]);
+    expect(revisions.body.data.map((row: Row) => row.version)).toEqual([2, 1]);
 
     const restored = await api().post(url(`/pages/${pageId}/revisions/1/restore`)).set(owner.headers);
     expect(restored.status).toBe(200);
@@ -105,7 +105,7 @@ describe('pages', () => {
     expect(moved.status).toBe(200);
 
     const detail = await api().get(url(`/pages/${grandchild.body.data.id}`)).set(owner.headers);
-    expect(detail.body.data.breadcrumb.map((row) => row.title)).toEqual(['Beta', 'Child']);
+    expect(detail.body.data.breadcrumb.map((row: Row) => row.title)).toEqual(['Beta', 'Child']);
   });
 
   it('archives a page together with everything beneath it', async () => {
@@ -145,6 +145,6 @@ describe('pages', () => {
     expect(reordered.body.data.reordered).toBe(2);
 
     const tree = await api().get(url('/pages/tree')).set(owner.headers);
-    expect(tree.body.data.map((row) => row.title)).toEqual(['Second', 'First']);
+    expect(tree.body.data.map((row: Row) => row.title)).toEqual(['Second', 'First']);
   });
 });

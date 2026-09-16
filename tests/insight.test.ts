@@ -1,4 +1,4 @@
-import { api, createBoardWithLists, createChannel, setupWorkspace } from './helpers/factory.js';
+import { api, createBoardWithLists, createChannel, setupWorkspace, type Row } from './helpers/factory.js';
 
 async function seedWorkspace() {
   const context = await setupWorkspace();
@@ -36,7 +36,7 @@ describe('search', () => {
     const response = await api().get(url('/search')).set(owner.headers).query({ q: 'deploy' });
 
     expect(response.status).toBe(200);
-    expect(new Set(response.body.data.map((row) => row.kind))).toEqual(new Set(['page', 'card', 'message']));
+    expect(new Set(response.body.data.map((row: Row) => row.kind))).toEqual(new Set(['page', 'card', 'message']));
     expect(response.body.meta.pagination.byKind.message).toBe(2);
   });
 
@@ -45,7 +45,7 @@ describe('search', () => {
 
     const response = await api().get(url('/search')).set(member.headers).query({ q: 'deploy' });
 
-    expect(response.body.data.some((row) => String(row.snippet).includes('credentials'))).toBe(false);
+    expect(response.body.data.some((row: Row) => String(row.snippet).includes('credentials'))).toBe(false);
     expect(response.body.meta.pagination.byKind.message).toBe(1);
   });
 
@@ -53,7 +53,7 @@ describe('search', () => {
     const { owner, url } = await seedWorkspace();
 
     const pagesOnly = await api().get(url('/search')).set(owner.headers).query({ q: 'deploy', kinds: 'page' });
-    expect(pagesOnly.body.data.every((row) => row.kind === 'page')).toBe(true);
+    expect(pagesOnly.body.data.every((row: Row) => row.kind === 'page')).toBe(true);
 
     const bogus = await api().get(url('/search')).set(owner.headers).query({ q: 'deploy', kinds: 'page,bogus' });
     expect(bogus.status).toBe(422);
@@ -63,7 +63,7 @@ describe('search', () => {
     const { owner, url } = await seedWorkspace();
 
     const matches = await api().get(url('/search/suggestions')).set(owner.headers).query({ q: 'De' });
-    expect(matches.body.data.map((row) => row.label)).toContain('Deployment Runbook');
+    expect(matches.body.data.map((row: Row) => row.label)).toContain('Deployment Runbook');
 
     const injected = await api().get(url('/search/suggestions')).set(owner.headers).query({ q: '.*' });
     expect(injected.status).toBe(200);
@@ -115,7 +115,7 @@ describe('analytics', () => {
 
     const response = await api().get(url('/analytics/members')).set(owner.headers);
 
-    const scores = Object.fromEntries(response.body.data.map((row) => [row.user.id, row.activityScore]));
+    const scores = Object.fromEntries(response.body.data.map((row: Row) => [row.user.id, row.activityScore]));
     expect(scores[owner.id]).toBeGreaterThan(0);
     expect(scores[member.id]).toBeGreaterThan(0);
     expect(response.body.data[0].activityScore).toBeGreaterThanOrEqual(response.body.data.at(-1).activityScore);

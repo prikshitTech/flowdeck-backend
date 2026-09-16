@@ -1,6 +1,6 @@
-import { api, createBoardWithLists, setupWorkspace } from './helpers/factory.js';
+import { api, createBoardWithLists, setupWorkspace, type Row, type TestUser } from './helpers/factory.js';
 
-async function orderOf(user, url, boardId, listId) {
+async function orderOf(user: TestUser, url: (suffix: string) => string, boardId: string, listId: string) {
   const response = await api()
     .get(url(`/boards/${boardId}/cards`))
     .set(user.headers)
@@ -8,8 +8,8 @@ async function orderOf(user, url, boardId, listId) {
 
   return response.body.data
     .slice()
-    .sort((a, b) => a.position - b.position)
-    .map((card) => card.title);
+    .sort((a: Row, b: Row) => a.position - b.position)
+    .map((card: Row) => card.title);
 }
 
 describe('boards', () => {
@@ -53,7 +53,7 @@ describe('boards', () => {
       created.push(card.body.data);
     }
 
-    expect(created.map((card) => card.position)).toEqual([0, 1, 2, 3]);
+    expect(created.map((card: Row) => card.position)).toEqual([0, 1, 2, 3]);
 
     const moved = await api()
       .post(url(`/boards/${board.id}/cards/${created[1].id}/move`))
@@ -134,7 +134,7 @@ describe('boards', () => {
       .set(owner.headers)
       .query({ list: lists[0].id });
 
-    expect(remaining.body.data.map((card) => card.position).sort()).toEqual([0, 1]);
+    expect(remaining.body.data.map((card: Row) => card.position).sort()).toEqual([0, 1]);
   });
 
   it('toggles completion and filters the card list', async () => {

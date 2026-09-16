@@ -1,14 +1,14 @@
-import { ENDPOINTS, TAGS } from '../src/docs/endpoints.js';
-import { api } from './helpers/factory.js';
+import { ENDPOINTS, TAGS, type Endpoint } from '../src/docs/endpoints.js';
+import { api, type Row } from './helpers/factory.js';
 import { buildDocument } from '../src/docs/openapi.js';
 
 const SAMPLE_ID = '000000000000000000000000';
 const MISSING_ROUTE_PREFIX = 'The requested route does not exist';
 
-function concreteUrl(endpoint) {
+function concreteUrl(endpoint: Endpoint): string {
   const path = endpoint.path
     .split('/')
-    .map((segment) => (segment.startsWith(':') ? (segment === ':version' ? '1' : SAMPLE_ID) : segment))
+    .map((segment: string) => (segment.startsWith(':') ? (segment === ':version' ? '1' : SAMPLE_ID) : segment))
     .join('/');
 
   return `/api/v1${path}`;
@@ -56,11 +56,11 @@ describe('api documentation', () => {
     for (const [route, methods] of Object.entries(document.paths)) {
       const expected = route
         .split('/')
-        .filter((segment) => segment.startsWith('{'))
-        .map((segment) => segment.slice(1, -1));
+        .filter((segment: string) => segment.startsWith('{'))
+        .map((segment: string) => segment.slice(1, -1));
 
       for (const operation of Object.values(methods)) {
-        const declared = operation.parameters.filter((item) => item.in === 'path').map((item) => item.name);
+        const declared = operation.parameters.filter((item: Row) => item.in === 'path').map((item: Row) => item.name);
 
         expect(declared.sort()).toEqual(expected.sort());
       }

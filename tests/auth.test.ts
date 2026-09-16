@@ -1,4 +1,4 @@
-import { api, registerUser, strongPassword, uniqueEmail } from './helpers/factory.js';
+import { api, registerUser, strongPassword, uniqueEmail, type Row } from './helpers/factory.js';
 
 describe('auth', () => {
   it('registers an account and returns a token pair', async () => {
@@ -21,7 +21,7 @@ describe('auth', () => {
 
     expect(response.status).toBe(422);
     expect(response.body.code).toBe('VALIDATION_FAILED');
-    expect(response.body.details.map((item) => item.field)).toContain('password');
+    expect(response.body.details.map((item: Row) => item.field)).toContain('password');
   });
 
   it('refuses a duplicate email', async () => {

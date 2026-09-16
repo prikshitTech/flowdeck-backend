@@ -1,4 +1,4 @@
-import { api, createChannel, setupWorkspace } from './helpers/factory.js';
+import { api, createChannel, setupWorkspace, type Row } from './helpers/factory.js';
 
 describe('channels', () => {
   it('rejects a second channel with the same slug', async () => {
@@ -24,7 +24,7 @@ describe('channels', () => {
     expect(join.status).toBe(403);
 
     const listed = await api().get(url('/channels')).set(member.headers);
-    expect(listed.body.data.map((row) => row.name)).not.toContain('Leadership');
+    expect(listed.body.data.map((row: Row) => row.name)).not.toContain('Leadership');
   });
 
   it('requires joining a public channel before posting', async () => {
@@ -63,21 +63,21 @@ describe('channels', () => {
       .send({ body: 'reply one', parent: root.body.data.id });
 
     const first = await api().get(url(`/channels/${channel.id}/messages`)).set(owner.headers).query({ limit: 4 });
-    expect(first.body.data.map((row) => row.body)).toEqual(['message 5', 'message 6', 'message 7', 'thread starter']);
+    expect(first.body.data.map((row: Row) => row.body)).toEqual(['message 5', 'message 6', 'message 7', 'thread starter']);
     expect(first.body.meta.pagination.hasMore).toBe(true);
 
     const second = await api()
       .get(url(`/channels/${channel.id}/messages`))
       .set(owner.headers)
       .query({ limit: 4, before: first.body.meta.pagination.next });
-    expect(second.body.data.map((row) => row.body)).toEqual(['message 1', 'message 2', 'message 3', 'message 4']);
+    expect(second.body.data.map((row: Row) => row.body)).toEqual(['message 1', 'message 2', 'message 3', 'message 4']);
     expect(second.body.meta.pagination.hasMore).toBe(false);
 
     const thread = await api()
       .get(url(`/channels/${channel.id}/messages`))
       .set(owner.headers)
       .query({ parent: root.body.data.id });
-    expect(thread.body.data.map((row) => row.body)).toEqual(['reply one']);
+    expect(thread.body.data.map((row: Row) => row.body)).toEqual(['reply one']);
   });
 
   it('toggles a reaction on and off and rejects unknown ones', async () => {

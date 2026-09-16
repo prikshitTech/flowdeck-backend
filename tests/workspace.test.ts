@@ -1,4 +1,4 @@
-import { addMember, api, createWorkspace, registerUser } from './helpers/factory.js';
+import { addMember, api, createWorkspace, registerUser, type Row } from './helpers/factory.js';
 
 describe('workspaces', () => {
   it('creates a workspace, slugifies the name and enrols the creator as owner', async () => {
@@ -110,7 +110,7 @@ describe('workspaces', () => {
     expect(repeated.status).toBe(403);
 
     const members = await api().get(`/api/v1/workspaces/${workspace.id}/members`).set(mate.headers);
-    const roles = Object.fromEntries(members.body.data.map((row) => [row.user.id, row.role]));
+    const roles = Object.fromEntries(members.body.data.map((row: Row) => [row.user.id, row.role]));
     expect(roles[mate.id]).toBe('owner');
     expect(roles[owner.id]).toBe('admin');
   });

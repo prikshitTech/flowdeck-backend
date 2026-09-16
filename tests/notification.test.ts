@@ -1,4 +1,4 @@
-import { api, createBoardWithLists, createChannel, setupWorkspace } from './helpers/factory.js';
+import { api, createBoardWithLists, createChannel, setupWorkspace, type Row } from './helpers/factory.js';
 
 describe('notifications', () => {
   it('notifies a mentioned member but never the author', async () => {
@@ -99,14 +99,14 @@ describe('audit trail', () => {
     await api().patch(url('')).set(owner.headers).send({ name: '' });
 
     const response = await api().get(url('/audit-logs')).set(owner.headers);
-    const actions = response.body.data.map((row) => row.action);
+    const actions = response.body.data.map((row: Row) => row.action);
 
     expect(response.status).toBe(200);
     expect(actions).toEqual(expect.arrayContaining(['workspace.created', 'member.added', 'workspace.updated', 'page.created']));
-    expect(actions.filter((action) => action === 'workspace.updated')).toHaveLength(1);
-    expect(response.body.data.every((row) => row.entityId !== null)).toBe(true);
+    expect(actions.filter((action: string) => action === 'workspace.updated')).toHaveLength(1);
+    expect(response.body.data.every((row: Row) => row.entityId !== null)).toBe(true);
     expect(response.body.data[0].actor.id).toBe(owner.id);
-    expect(response.body.data.every((row) => row.workspace === undefined || row.workspace === workspace.id)).toBe(true);
+    expect(response.body.data.every((row: Row) => row.workspace === undefined || row.workspace === workspace.id)).toBe(true);
   });
 
   it('is limited to workspace admins', async () => {
@@ -123,7 +123,7 @@ describe('audit trail', () => {
 
     const filtered = await api().get(url('/audit-logs')).set(owner.headers).query({ action: 'page.created' });
     expect(filtered.body.data).toHaveLength(2);
-    expect(filtered.body.data.every((row) => row.action === 'page.created')).toBe(true);
+    expect(filtered.body.data.every((row: Row) => row.action === 'page.created')).toBe(true);
 
     const summary = await api().get(url('/audit-logs/summary')).set(owner.headers);
     expect(summary.status).toBe(200);

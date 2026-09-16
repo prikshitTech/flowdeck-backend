@@ -76,19 +76,17 @@
       ]
     },
     "testMatch": [
-      "<rootDir>/tests/**/*.test.[jt]s"
+      "<rootDir>/tests/**/*.test.ts"
     ],
     "testTimeout": 60000,
-    "globalSetup": "<rootDir>/tests/setup/globalSetup.js",
-    "globalTeardown": "<rootDir>/tests/setup/globalTeardown.js",
     "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup/testEnvironment.js"
+      "<rootDir>/tests/setup/testEnvironment.ts"
     ],
     "collectCoverageFrom": [
-      "src/**/*.{js,ts}",
-      "!src/server.*",
-      "!src/worker.*",
-      "!src/config/logger.*",
+      "src/**/*.ts",
+      "!src/server.ts",
+      "!src/worker.ts",
+      "!src/config/logger.ts",
       "!src/types/**"
     ],
     "coverageReporters": [
