@@ -24,7 +24,7 @@ async function bootstrap() {
 
   server.listen(env.PORT, () => logger.info(`api and realtime listening on port ${env.PORT}`));
 
-  const shutdown = async (signal) => {
+  const shutdown = async (signal: NodeJS.Signals) => {
     logger.info(`${signal} received, shutting down`);
     await realtime.close();
     server.close();

@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import mongoSanitize from 'express-mongo-sanitize';
-import pinoHttp from 'pino-http';
+import { pinoHttp } from 'pino-http';
 
 import logger from './config/logger.js';
 import docsRoutes from './routes/docs.routes.js';
@@ -24,7 +24,7 @@ app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }));
 app.use(cors({ origin: corsOrigins, credentials: true, maxAge: 86400 }));
 app.use(compression());
-app.use(pinoHttp({ logger, customLogLevel: (req, res) => (res.statusCode >= 500 ? 'error' : 'info') }));
+app.use(pinoHttp({ logger, customLogLevel: (_req, res) => (res.statusCode >= 500 ? 'error' : 'info') }));
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));

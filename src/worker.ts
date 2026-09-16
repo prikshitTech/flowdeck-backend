@@ -10,7 +10,7 @@ async function bootstrap() {
   startWorkers();
   await scheduleRecurringJobs();
 
-  const shutdown = async (signal) => {
+  const shutdown = async (signal: NodeJS.Signals) => {
     logger.info(`${signal} received, stopping workers`);
     await stopWorkers();
     await Promise.allSettled([disconnectDatabase(), disconnectRedis()]);

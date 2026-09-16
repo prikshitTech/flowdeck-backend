@@ -1,28 +1,28 @@
-import { Worker } from 'bullmq';
+import { Worker, type Processor } from 'bullmq';
 
 import handleAuditJob from './workers/audit.worker.js';
 import handleMaintenanceJob from './workers/maintenance.worker.js';
 import handleNotificationJob from './workers/notification.worker.js';
 import logger from '../config/logger.js';
-import { JOB, QUEUE, REPEATABLE } from '../constants/queues.js';
+import { JOB, QUEUE, REPEATABLE, type QueueName } from '../constants/queues.js';
 import { closeQueues, enqueue, queueConnection, scheduleRepeatable } from './index.js';
 import { persist, useAuditSink } from '../services/audit.service.js';
 
 const WORKER_CONCURRENCY = 5;
 
-const definitions = [
+const definitions: { name: QueueName; processor: Processor }[] = [
   { name: QUEUE.AUDIT, processor: handleAuditJob },
   { name: QUEUE.NOTIFICATION, processor: handleNotificationJob },
   { name: QUEUE.MAINTENANCE, processor: handleMaintenanceJob }
 ];
 
-const workers = [];
+const workers: Worker[] = [];
 
-export function routeAuditsThroughQueue() {
+export function routeAuditsThroughQueue(): void {
   useAuditSink((entry) => enqueue(QUEUE.AUDIT, JOB.AUDIT_ENTRY, entry, { runInline: persist }));
 }
 
-export function startWorkers() {
+export function startWorkers(): Worker[] {
   for (const { name, processor } of definitions) {
     const worker = new Worker(name, processor, {
       connection: queueConnection(),
@@ -39,13 +39,13 @@ export function startWorkers() {
   return workers;
 }
 
-export async function scheduleRecurringJobs() {
+export async function scheduleRecurringJobs(): Promise<void> {
   for (const [jobName, repeat] of Object.entries(REPEATABLE)) {
     await scheduleRepeatable(QUEUE.MAINTENANCE, jobName, repeat);
   }
 }
 
-export async function stopWorkers() {
+export async function stopWorkers(): Promise<void> {
   await Promise.allSettled(workers.map((worker) => worker.close()));
   workers.length = 0;
   await closeQueues();

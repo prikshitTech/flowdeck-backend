@@ -28,3 +28,7 @@ export default function validate(schemas: RequestSchemas): RequestHandler {
     return next();
   };
 }
+
+export function validQuery<T>(req: Request): T {
+  return req.query as unknown as T;
+}

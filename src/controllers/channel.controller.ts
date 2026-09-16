@@ -1,6 +1,8 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import * as channelService from '../services/channel.service.js';
 import { CHANNEL_MESSAGES, COMMON_MESSAGES } from '../constants/messages.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListChannelsQuery, ListMessagesQuery } from '../validators/channel.validator.js';
 
 export const create = asyncHandler(async (req, res) => {
   const channel = await channelService.createChannel(req.workspaceId, req.auth.userId, req.body);
@@ -9,7 +11,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await channelService.listChannels(req.workspaceId, req.auth.userId, req.query);
+  const { items, pagination } = await channelService.listChannels(req.workspaceId, req.auth.userId, validQuery<ListChannelsQuery>(req));
 
   res.list(items, pagination);
 });
@@ -60,7 +62,7 @@ export const messages = asyncHandler(async (req, res) => {
     req.workspaceId,
     req.params.channelId,
     req.auth.userId,
-    req.query
+    validQuery<ListMessagesQuery>(req)
   );
 
   res.list(items, cursor);

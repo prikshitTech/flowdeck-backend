@@ -1,6 +1,8 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import * as boardService from '../services/board.service.js';
 import { BOARD_MESSAGES, COMMON_MESSAGES } from '../constants/messages.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListBoardsQuery, ListCardsQuery } from '../validators/board.validator.js';
 
 export const create = asyncHandler(async (req, res) => {
   const board = await boardService.createBoard(req.workspaceId, req.auth.userId, req.body);
@@ -9,7 +11,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await boardService.listBoards(req.workspaceId, req.query);
+  const { items, pagination } = await boardService.listBoards(req.workspaceId, validQuery<ListBoardsQuery>(req));
 
   res.list(items, pagination);
 });
@@ -67,7 +69,7 @@ export const createCard = asyncHandler(async (req, res) => {
 });
 
 export const cards = asyncHandler(async (req, res) => {
-  const { items, pagination } = await boardService.listCards(req.workspaceId, req.params.boardId, req.query);
+  const { items, pagination } = await boardService.listCards(req.workspaceId, req.params.boardId, validQuery<ListCardsQuery>(req));
 
   res.list(items, pagination);
 });

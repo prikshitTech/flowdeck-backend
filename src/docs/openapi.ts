@@ -1,9 +1,19 @@
-import { ENDPOINTS, TAGS } from './endpoints.js';
-import { pathParameters, queryParameters, requestBody, toOpenApiPath } from './schema.js';
+import { ENDPOINTS, TAGS, type Endpoint } from './endpoints.js';
+import { pathParameters, queryParameters, requestBody, toOpenApiPath, type JsonSchema, type Parameter } from './schema.js';
+
+interface Operation {
+  tags: string[];
+  summary: string;
+  description: string;
+  parameters: Parameter[];
+  responses: Record<string, unknown>;
+  requestBody?: unknown;
+  security?: unknown[];
+}
 
 const API_PREFIX = '/api/v1';
 
-const envelope = (dataSchema) => ({
+const envelope = (dataSchema: JsonSchema) => ({
   type: 'object',
   properties: {
     success: { type: 'boolean' },
@@ -23,7 +33,7 @@ const errorSchema = {
   }
 };
 
-const FAILURES = {
+const FAILURES: Record<number, string> = {
   400: 'Request rejected by a business rule',
   401: 'Missing, expired or revoked access token',
   403: 'Authenticated but not allowed at this role',
@@ -33,7 +43,7 @@ const FAILURES = {
   429: 'Rate limit or brute force guard tripped'
 };
 
-function failureResponses(endpoint) {
+function failureResponses(endpoint: Endpoint) {
   const codes = [422, 429];
 
   if (endpoint.auth !== false) {
@@ -42,7 +52,7 @@ function failureResponses(endpoint) {
 
   return Object.fromEntries(
     codes
-      .sort()
+      .sort((a, b) => a - b)
       .map((code) => [
         code,
         { description: FAILURES[code], content: { 'application/json': { schema: errorSchema } } }
@@ -50,7 +60,7 @@ function failureResponses(endpoint) {
   );
 }
 
-function successResponse(endpoint) {
+function successResponse(endpoint: Endpoint) {
   if (endpoint.binary) {
     return {
       description: 'File stream, 206 when a Range header is supplied',
@@ -66,7 +76,7 @@ function successResponse(endpoint) {
   };
 }
 
-function operationBody(endpoint) {
+function operationBody(endpoint: Endpoint) {
   if (endpoint.multipart) {
     return {
       required: true,
@@ -89,8 +99,8 @@ function operationBody(endpoint) {
   return requestBody(endpoint.schema?.body);
 }
 
-function describe(endpoint) {
-  const notes = [];
+function describe(endpoint: Endpoint): string {
+  const notes: string[] = [];
 
   if (endpoint.role) {
     notes.push(`Requires the workspace role **${endpoint.role}** or higher.`);
@@ -103,8 +113,8 @@ function describe(endpoint) {
   return notes.join(' ');
 }
 
-function buildOperation(endpoint) {
-  const operation = {
+function buildOperation(endpoint: Endpoint): Operation {
+  const operation: Operation = {
     tags: [endpoint.tag],
     summary: endpoint.summary,
     description: describe(endpoint),
@@ -129,7 +139,7 @@ function buildOperation(endpoint) {
 }
 
 export function buildDocument() {
-  const paths = {};
+  const paths: Record<string, Record<string, Operation>> = {};
 
   for (const endpoint of ENDPOINTS) {
     const route = `${API_PREFIX}${toOpenApiPath(endpoint.path)}`;

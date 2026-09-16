@@ -8,6 +8,21 @@ import * as notification from '../validators/notification.validator.js';
 import * as page from '../validators/page.validator.js';
 import * as workspace from '../validators/workspace.validator.js';
 
+import type { RequestSchemas } from '../middlewares/validate.js';
+
+export interface Endpoint {
+  method: 'get' | 'post' | 'patch' | 'delete';
+  path: string;
+  tag: string;
+  summary: string;
+  auth?: false;
+  role?: string;
+  schema?: RequestSchemas;
+  ok?: number;
+  multipart?: boolean;
+  binary?: boolean;
+}
+
 const WORKSPACE_BASE = '/workspaces/:workspaceId';
 
 export const TAGS = [
@@ -24,7 +39,7 @@ export const TAGS = [
   { name: 'System', description: 'Service health' }
 ];
 
-export const ENDPOINTS = [
+export const ENDPOINTS: Endpoint[] = [
   { method: 'get', path: '/health', tag: 'System', summary: 'Service health probe', auth: false },
 
   { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Create an account', auth: false, schema: auth.registerSchema, ok: 201 },

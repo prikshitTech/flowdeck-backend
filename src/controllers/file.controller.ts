@@ -4,6 +4,8 @@ import { COMMON_MESSAGES } from '../constants/messages.js';
 import { FILE_MESSAGES } from '../constants/files.js';
 import { HTTP_STATUS } from '../constants/statusCodes.js';
 import { parseRange } from '../helpers/range.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListFilesQuery } from '../validators/file.validator.js';
 
 export const upload = asyncHandler(async (req, res) => {
   const { asset, deduplicated } = await fileService.registerUpload(
@@ -17,7 +19,7 @@ export const upload = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await fileService.listFiles(req.workspaceId, req.query);
+  const { items, pagination } = await fileService.listFiles(req.workspaceId, validQuery<ListFilesQuery>(req));
 
   res.list(items, pagination);
 });

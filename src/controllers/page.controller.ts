@@ -1,6 +1,8 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import * as pageService from '../services/page.service.js';
 import { COMMON_MESSAGES, PAGE_MESSAGES } from '../constants/messages.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListPagesQuery, ListRevisionsQuery } from '../validators/page.validator.js';
 
 export const create = asyncHandler(async (req, res) => {
   const page = await pageService.createPage(req.workspaceId, req.auth.userId, req.body);
@@ -9,7 +11,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await pageService.listPages(req.workspaceId, req.query);
+  const { items, pagination } = await pageService.listPages(req.workspaceId, validQuery<ListPagesQuery>(req));
 
   res.list(items, pagination);
 });
@@ -51,7 +53,7 @@ export const archive = asyncHandler(async (req, res) => {
 });
 
 export const revisions = asyncHandler(async (req, res) => {
-  const { items, pagination } = await pageService.listRevisions(req.workspaceId, req.params.pageId, req.query);
+  const { items, pagination } = await pageService.listRevisions(req.workspaceId, req.params.pageId, validQuery<ListRevisionsQuery>(req));
 
   res.list(items, pagination);
 });
@@ -60,7 +62,7 @@ export const restore = asyncHandler(async (req, res) => {
   const page = await pageService.restoreRevision(
     req.workspaceId,
     req.params.pageId,
-    req.params.version,
+    Number(req.params.version),
     req.auth.userId
   );
 

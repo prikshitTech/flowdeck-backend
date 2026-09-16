@@ -1,6 +1,8 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import * as workspaceService from '../services/workspace.service.js';
 import { COMMON_MESSAGES, WORKSPACE_MESSAGES } from '../constants/messages.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListMembersQuery, ListWorkspacesQuery } from '../validators/workspace.validator.js';
 
 export const create = asyncHandler(async (req, res) => {
   const workspace = await workspaceService.createWorkspace(req.auth.userId, req.body);
@@ -9,7 +11,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await workspaceService.listWorkspaces(req.auth.userId, req.query);
+  const { items, pagination } = await workspaceService.listWorkspaces(req.auth.userId, validQuery<ListWorkspacesQuery>(req));
 
   res.list(items, pagination);
 });
@@ -33,7 +35,7 @@ export const archive = asyncHandler(async (req, res) => {
 });
 
 export const members = asyncHandler(async (req, res) => {
-  const { items, pagination } = await workspaceService.listMembers(req.workspaceId, req.query);
+  const { items, pagination } = await workspaceService.listMembers(req.workspaceId, validQuery<ListMembersQuery>(req));
 
   res.list(items, pagination);
 });

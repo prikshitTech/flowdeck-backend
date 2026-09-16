@@ -1,3 +1,5 @@
+import type { Job } from 'bullmq';
+
 import Card from '../../models/card.model.js';
 import Page from '../../models/page.model.js';
 import { JOB } from '../../constants/queues.js';
@@ -16,12 +18,12 @@ async function purgeArchived() {
   return { pages: pages.deletedCount, cards: cards.deletedCount };
 }
 
-const handlers = {
+const handlers: Record<string, () => Promise<unknown>> = {
   [JOB.DUE_SOON_SWEEP]: remindDueCards,
   [JOB.PURGE_ARCHIVED]: purgeArchived
 };
 
-export default async function handleMaintenanceJob(job) {
+export default async function handleMaintenanceJob(job: Job) {
   const handler = handlers[job.name];
 
   return handler ? handler() : { skipped: job.name };

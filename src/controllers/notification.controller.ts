@@ -1,9 +1,11 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import * as notificationService from '../services/notification.service.js';
 import { COMMON_MESSAGES, NOTIFICATION_MESSAGES } from '../constants/messages.js';
+import { validQuery } from '../middlewares/validate.js';
+import type { ListNotificationsQuery } from '../validators/notification.validator.js';
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await notificationService.listNotifications(req.auth.userId, req.query);
+  const { items, pagination } = await notificationService.listNotifications(req.auth.userId, validQuery<ListNotificationsQuery>(req));
 
   res.list(items, pagination);
 });

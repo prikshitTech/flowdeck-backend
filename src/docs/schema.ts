@@ -1,21 +1,31 @@
-import { z } from 'zod';
+import { z, type ZodType } from 'zod';
 
 const PATH_PARAM_PREFIX = ':';
 
-export function toSchema(zodSchema) {
+export type JsonSchema = Record<string, unknown>;
+
+export interface Parameter {
+  name: string;
+  in: 'path' | 'query';
+  required: boolean;
+  schema: unknown;
+  description?: string;
+}
+
+export function toSchema(zodSchema: ZodType): JsonSchema {
   const { $schema, ...rest } = z.toJSONSchema(zodSchema, { io: 'input', unrepresentable: 'any' });
 
   return rest;
 }
 
-export function toOpenApiPath(expressPath) {
+export function toOpenApiPath(expressPath: string): string {
   return expressPath
     .split('/')
     .map((segment) => (segment.startsWith(PATH_PARAM_PREFIX) ? `{${segment.slice(1)}}` : segment))
     .join('/');
 }
 
-export function pathParameters(expressPath) {
+export function pathParameters(expressPath: string): Parameter[] {
   return expressPath
     .split('/')
     .filter((segment) => segment.startsWith(PATH_PARAM_PREFIX))
@@ -28,12 +38,15 @@ export function pathParameters(expressPath) {
     }));
 }
 
-export function queryParameters(zodSchema) {
+export function queryParameters(zodSchema?: ZodType): Parameter[] {
   if (!zodSchema) {
     return [];
   }
 
-  const { properties = {}, required = [] } = toSchema(zodSchema);
+  const { properties = {}, required = [] } = toSchema(zodSchema) as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
 
   return Object.entries(properties).map(([name, schema]) => ({
     name,
@@ -43,7 +56,7 @@ export function queryParameters(zodSchema) {
   }));
 }
 
-export function requestBody(zodSchema) {
+export function requestBody(zodSchema?: ZodType) {
   if (!zodSchema) {
     return undefined;
   }
