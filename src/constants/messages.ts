@@ -9,7 +9,7 @@ export const COMMON_MESSAGES = {
   CREATED: 'Created successfully',
   UPDATED: 'Updated successfully',
   DELETED: 'Deleted successfully'
-};
+} as const;
 
 export const AUTH_MESSAGES = {
   REGISTERED: 'Account created successfully',
@@ -31,7 +31,7 @@ export const AUTH_MESSAGES = {
   TOKEN_EXPIRED: 'Access token has expired',
   SESSION_REVOKED: 'This session is no longer valid, please sign in again',
   ROLE_NOT_ALLOWED: 'Your role does not allow this action'
-};
+} as const;
 
 export const WORKSPACE_MESSAGES = {
   CREATED: 'Workspace created successfully',
@@ -50,7 +50,7 @@ export const WORKSPACE_MESSAGES = {
   OWNER_CANNOT_LEAVE: 'Transfer ownership before leaving the workspace',
   OWNERSHIP_TRANSFERRED: 'Ownership transferred successfully',
   USER_NOT_FOUND: 'No account exists with that email'
-};
+} as const;
 
 export const PAGE_MESSAGES = {
   CREATED: 'Page created successfully',
@@ -64,7 +64,7 @@ export const PAGE_MESSAGES = {
   TOO_DEEP: 'Pages cannot be nested any deeper',
   CANNOT_NEST_IN_SELF: 'A page cannot be nested inside itself',
   CANNOT_NEST_IN_DESCENDANT: 'A page cannot be nested inside one of its own children'
-};
+} as const;
 
 export const BOARD_MESSAGES = {
   CREATED: 'Board created successfully',
@@ -82,7 +82,7 @@ export const BOARD_MESSAGES = {
   CARD_ARCHIVED: 'Card archived successfully',
   CARD_NOT_FOUND: 'Card not found on this board',
   ASSIGNEE_NOT_MEMBER: 'Cards can only be assigned to workspace members'
-};
+} as const;
 
 export const CHANNEL_MESSAGES = {
   CREATED: 'Channel created successfully',
@@ -102,16 +102,16 @@ export const CHANNEL_MESSAGES = {
   MESSAGE_NOT_FOUND: 'Message not found',
   NOT_MESSAGE_AUTHOR: 'You can only change your own messages',
   REACTION_UPDATED: 'Reaction updated'
-};
+} as const;
 
 export const NOTIFICATION_MESSAGES = {
   NOT_FOUND: 'Notification not found',
   MARKED_READ: 'Notification marked as read',
   ALL_MARKED_READ: 'Notifications marked as read'
-};
+} as const;
 
 export const SEARCH_MESSAGES = {
   RESULTS: 'Search completed',
   SUGGESTIONS: 'Suggestions ready',
   QUERY_TOO_SHORT: 'Search needs at least two characters'
-};
+} as const;

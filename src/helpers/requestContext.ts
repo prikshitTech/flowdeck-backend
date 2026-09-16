@@ -1,11 +1,18 @@
-export function describeRequest(req) {
+import type { Request } from 'express';
+
+export interface RequestContext {
+  ip: string | null;
+  userAgent: string | null;
+}
+
+export function describeRequest(req: Request): RequestContext {
   return {
-    ip: req.ip,
+    ip: req.ip ?? null,
     userAgent: req.get('user-agent') ?? null
   };
 }
 
-export function bearerToken(req) {
+export function bearerToken(req: Request): string | null {
   const header = req.get('authorization');
 
   if (!header) {

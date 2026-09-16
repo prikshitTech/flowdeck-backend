@@ -14,7 +14,7 @@ export const HTTP_STATUS = {
   TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
   SERVICE_UNAVAILABLE: 503
-};
+} as const;
 
 export const ERROR_CODE = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
@@ -25,4 +25,6 @@ export const ERROR_CODE = {
   FORBIDDEN: 'FORBIDDEN',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL: 'INTERNAL'
-};
+} as const;
+
+export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];

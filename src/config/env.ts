@@ -26,6 +26,8 @@ const schema = z.object({
     .transform((value) => value === 'true')
 });
 
+export type Env = z.infer<typeof schema>;
+
 const parsed = schema.safeParse(process.env);
 
 if (!parsed.success) {
@@ -33,9 +35,9 @@ if (!parsed.success) {
   throw new Error(`Invalid environment configuration\n${details.join('\n')}`);
 }
 
-const env = parsed.data;
+const env: Env = parsed.data;
 
-export const corsOrigins =
+export const corsOrigins: string | string[] =
   env.CORS_ORIGINS === '*' ? '*' : env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean);
 
 export const isProduction = env.NODE_ENV === 'production';

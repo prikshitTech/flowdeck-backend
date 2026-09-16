@@ -1,6 +1,11 @@
 const PREFIX = 'bytes=';
 
-export function parseRange(header) {
+export interface ByteRange {
+  start: number;
+  end: number | null;
+}
+
+export function parseRange(header: string | undefined): ByteRange | null {
   if (!header || !header.startsWith(PREFIX)) {
     return null;
   }

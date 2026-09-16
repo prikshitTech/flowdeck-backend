@@ -6,14 +6,14 @@ const MAX_LENGTH = 60;
 const COMBINING_START = 0x0300;
 const COMBINING_END = 0x036f;
 
-function isCombiningMark(character) {
-  const code = character.codePointAt(0);
+function isCombiningMark(character: string): boolean {
+  const code = character.codePointAt(0) ?? 0;
   return code >= COMBINING_START && code <= COMBINING_END;
 }
 
-export function slugify(value) {
+export function slugify(value: string): string {
   const characters = [...value.normalize('NFKD').toLowerCase()];
-  const output = [];
+  const output: string[] = [];
 
   for (const character of characters) {
     if (isCombiningMark(character)) {
@@ -37,7 +37,7 @@ export function slugify(value) {
   return output.join('').slice(0, MAX_LENGTH);
 }
 
-export function uniqueSlug(value) {
+export function uniqueSlug(value: string): string {
   const base = slugify(value) || 'workspace';
   return `${base}-${crypto.randomBytes(3).toString('hex')}`;
 }

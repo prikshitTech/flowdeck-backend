@@ -1,6 +1,6 @@
 const IPV6_PREFIX_GROUPS = 4;
 
-export function clientKey(ip) {
+export function clientKey(ip: string | null | undefined): string {
   if (!ip) {
     return 'unknown';
   }

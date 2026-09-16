@@ -24,7 +24,7 @@ export const AUDIT_ACTION = {
   MESSAGE_DELETED: 'message.deleted',
   FILE_UPLOADED: 'file.uploaded',
   FILE_DELETED: 'file.deleted'
-};
+} as const;
 
 export const AUDIT_ENTITY = {
   WORKSPACE: 'workspace',
@@ -36,6 +36,9 @@ export const AUDIT_ENTITY = {
   CHANNEL: 'channel',
   MESSAGE: 'message',
   FILE: 'file'
-};
+} as const;
 
 export const AUDIT_RETENTION_DAYS = 180;
+
+export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
+export type AuditEntity = (typeof AUDIT_ENTITY)[keyof typeof AUDIT_ENTITY];

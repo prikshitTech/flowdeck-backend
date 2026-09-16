@@ -19,11 +19,11 @@ export const SOCKET_EVENT = {
   NOTIFICATION_CREATED: 'notification:created',
   PRESENCE_CHANGED: 'presence:changed',
   ERROR: 'realtime:error'
-};
+} as const;
 
 export const ROOM = {
-  user: (userId) => `user:${userId}`,
-  workspace: (workspaceId) => `workspace:${workspaceId}`,
-  channel: (channelId) => `channel:${channelId}`,
-  board: (boardId) => `board:${boardId}`
-};
+  user: (userId: string) => `user:${userId}`,
+  workspace: (workspaceId: string) => `workspace:${workspaceId}`,
+  channel: (channelId: string) => `channel:${channelId}`,
+  board: (boardId: string) => `board:${boardId}`
+} as const;

@@ -1,11 +1,11 @@
-import mongoose from 'mongoose';
+import mongoose, { type Connection } from 'mongoose';
 
 import env from './env.js';
 import logger from './logger.js';
 
 mongoose.set('strictQuery', true);
 
-export async function connectDatabase() {
+export async function connectDatabase(): Promise<Connection> {
   mongoose.connection.on('disconnected', () => logger.warn('mongo disconnected'));
   mongoose.connection.on('reconnected', () => logger.info('mongo reconnected'));
 
@@ -20,6 +20,6 @@ export async function connectDatabase() {
   return mongoose.connection;
 }
 
-export async function disconnectDatabase() {
+export async function disconnectDatabase(): Promise<void> {
   await mongoose.connection.close();
 }

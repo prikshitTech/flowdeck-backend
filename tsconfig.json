@@ -15,6 +15,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "jest"],
+    "rootDir": ".",
     "noEmit": true
   },
   "include": ["src", "tests"]

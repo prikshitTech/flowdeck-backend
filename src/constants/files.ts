@@ -1,4 +1,4 @@
-export const ALLOWED_UPLOAD_TYPES = new Set([
+export const ALLOWED_UPLOAD_TYPES = new Set<string>([
   'image/png',
   'image/jpeg',
   'image/gif',
@@ -22,4 +22,4 @@ export const FILE_MESSAGES = {
   TYPE_NOT_ALLOWED: 'This file type is not accepted',
   TOO_LARGE: 'The uploaded file exceeds the maximum allowed size',
   NOT_OWNER: 'Only the uploader or a workspace admin can delete this file'
-};
+} as const;
