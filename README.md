@@ -3,7 +3,7 @@
 A small collaboration SaaS backend: workspaces hold nested **pages** (Notion), kanban
 **boards** (Trello) and **channels** (Slack), behind one authentication and permission model.
 
-Node 22, Express, MongoDB, Redis, BullMQ and Socket.io. 75 REST endpoints, 81 tests.
+TypeScript on Node 22, Express, MongoDB, Redis, BullMQ and Socket.io. 75 REST endpoints, 81 tests.
 
 - API reference: `http://localhost:4000/docs` (Swagger UI, spec at `/docs/openapi.json`)
 - [Architecture and request flow](docs/architecture.md)
@@ -30,7 +30,7 @@ containers from one image.
 ```bash
 npm install
 cp .env.example .env          # point MONGO_URI and REDIS_URL at Atlas / Upstash
-npm run dev                   # api + realtime + workers
+npm run dev                   # api + realtime + workers, run through tsx
 ```
 
 To split the worker out, set `RUN_WORKERS_IN_API=false` and run `npm run worker` alongside.
@@ -85,7 +85,12 @@ src/
   queues/       BullMQ queues and workers
   sockets/      realtime gateway and the emitter services publish through
   docs/         OpenAPI document built from the validators
+  types/        express request and response extensions
 ```
+
+The code is strict TypeScript (`strict`, `noUnusedLocals`, `isolatedModules`). Request types
+are inferred from the zod validators, so a service parameter and the schema that guards the
+route cannot disagree. Imports keep the `.js` suffix because the compiled output is native ESM.
 
 Controllers never touch a model and services never touch `req` or `res`, so business rules
 are testable and the HTTP layer stays thin.
@@ -141,6 +146,11 @@ before it reaches `RegExp` — searching for `.*` matches nothing rather than ev
 so a large file never lands in memory and the size limit aborts mid-stream instead of after
 the whole body arrives. Downloads support range requests.
 
+**Recurring jobs use job schedulers.** Converting the queue layer to TypeScript showed that
+BullMQ 6 dropped the `repeat` option on `queue.add`, so the hourly due-soon sweep and the
+nightly purge had been queued once and never again. They now register with
+`upsertJobScheduler`, which is also idempotent across restarts.
+
 **Redis is optional at runtime.** Every Redis call goes through one service that logs and
 returns a neutral value on failure, and job producers fall back to running the handler
 inline. A Redis outage costs throughput, not correctness — the
@@ -169,8 +179,10 @@ everything outside the public auth routes answers 401 without a token.
 
 | Command | Does |
 | --- | --- |
-| `npm run dev` | API, realtime and workers with file watching |
-| `npm start` | Production API |
-| `npm run worker` | Queue workers only |
+| `npm run dev` | API, realtime and workers from source with file watching |
+| `npm run typecheck` | Strict type check of `src` and `tests` |
+| `npm run build` | Compile `src` to `dist` |
+| `npm start` | Production API from `dist` |
+| `npm run worker` | Queue workers only, from `dist` |
 | `npm test` | Jest against an in-memory replica set |
 | `npm run test:coverage` | The same with a coverage report |

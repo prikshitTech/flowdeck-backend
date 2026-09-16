@@ -1,3 +1,12 @@
+FROM node:22-alpine AS build
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json tsconfig.build.json ./
+COPY src ./src
+RUN npm run build
+
 FROM node:22-alpine AS dependencies
 
 WORKDIR /app
@@ -12,8 +21,8 @@ WORKDIR /app
 RUN apk add --no-cache curl tini
 
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
 COPY package.json ./
-COPY src ./src
 
 RUN mkdir -p uploads && chown -R node:node /app
 
@@ -24,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS http://127.0.0.1:4000/api/v1/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "src/server.js"]
+CMD ["node", "dist/server.js"]
