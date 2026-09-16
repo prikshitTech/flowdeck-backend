@@ -1,20 +1,36 @@
-import mongoose from 'mongoose';
 
 import AuditLog from '../models/auditLog.model.js';
 import logger from '../config/logger.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
+import type { AuditAction, AuditEntity } from '../constants/audit.js';
+import type { Id } from '../helpers/objectId.js';
+import type { ListAuditQuery } from '../validators/audit.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
+type Match = Record<string, unknown>;
 
-let sink = async (entry) => {
+export interface AuditEntry {
+  workspace: Id | null;
+  actor: Id | null;
+  action: AuditAction;
+  entityType: AuditEntity | null;
+  entityId: Id | null;
+  metadata?: unknown;
+  ip: string | null;
+  userAgent: string | null;
+}
+
+type AuditSink = (entry: AuditEntry) => Promise<unknown>;
+
+let sink: AuditSink = async (entry) => {
   await AuditLog.create(entry);
 };
 
-export function useAuditSink(handler) {
+export function useAuditSink(handler: AuditSink): void {
   sink = handler;
 }
 
-export async function record(entry) {
+export async function record(entry: AuditEntry): Promise<void> {
   try {
     await sink(entry);
   } catch (error) {
@@ -22,12 +38,12 @@ export async function record(entry) {
   }
 }
 
-export async function persist(entry) {
+export async function persist(entry: AuditEntry): Promise<void> {
   await AuditLog.create(entry);
 }
 
-export async function listEntries(workspaceId, query) {
-  const match = { workspace: toObjectId(workspaceId) };
+export async function listEntries(workspaceId: string, query: ListAuditQuery) {
+  const match: Match = { workspace: toObjectId(workspaceId) };
 
   if (query.action) {
     match.action = query.action;
@@ -42,14 +58,15 @@ export async function listEntries(workspaceId, query) {
   }
 
   if (query.from || query.to) {
-    match.createdAt = {};
+    const range: Record<string, Date> = {};
+    match.createdAt = range;
 
     if (query.from) {
-      match.createdAt.$gte = query.from;
+      range.$gte = query.from;
     }
 
     if (query.to) {
-      match.createdAt.$lte = query.to;
+      range.$lte = query.to;
     }
   }
 
@@ -82,7 +99,7 @@ export async function listEntries(workspaceId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function summarise(workspaceId, since) {
+export async function summarise(workspaceId: string, since: Date) {
   const [summary] = await AuditLog.aggregate([
     { $match: { workspace: toObjectId(workspaceId), createdAt: { $gte: since } } },
     {

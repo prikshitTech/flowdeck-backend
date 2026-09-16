@@ -11,8 +11,12 @@ import {
   signRefreshToken,
   verifyRefreshToken
 } from '../helpers/token.js';
+import type { RefreshClaims } from '../helpers/token.js';
+import type { RequestContext } from '../helpers/requestContext.js';
+import type { UserDocument } from '../models/user.model.js';
+import type { ChangePasswordInput, LoginInput, RegisterInput, UpdateProfileInput } from '../validators/auth.validator.js';
 
-async function issueSession(user, context, family = newTokenFamily()) {
+async function issueSession(user: UserDocument, context: RequestContext, family = newTokenFamily()) {
   const refresh = signRefreshToken(user, family);
 
   await RefreshToken.create({
@@ -32,11 +36,11 @@ async function issueSession(user, context, family = newTokenFamily()) {
   };
 }
 
-async function revokeFamily(family) {
+async function revokeFamily(family: string) {
   await RefreshToken.updateMany({ family, revokedAt: null }, { $set: { revokedAt: new Date() } });
 }
 
-export async function register(payload, context) {
+export async function register(payload: RegisterInput, context: RequestContext) {
   const taken = await User.exists({ email: payload.email });
 
   if (taken) {
@@ -49,7 +53,7 @@ export async function register(payload, context) {
   return { user, session };
 }
 
-export async function login({ email, password }, context) {
+export async function login({ email, password }: LoginInput, context: RequestContext) {
   await assertLoginAllowed(email, context.ip);
 
   const user = await User.findOne({ email }).select('+password');
@@ -73,8 +77,8 @@ export async function login({ email, password }, context) {
   return { user, session };
 }
 
-export async function refreshSession(token, context) {
-  let claims;
+export async function refreshSession(token: string, context: RequestContext) {
+  let claims: RefreshClaims;
 
   try {
     claims = verifyRefreshToken(token);
@@ -102,7 +106,7 @@ export async function refreshSession(token, context) {
   return { user, session: await issueSession(user, context, claims.family) };
 }
 
-export async function logout(token) {
+export async function logout(token: string | undefined) {
   if (!token) {
     throw ApiError.badRequest(AUTH_MESSAGES.REFRESH_TOKEN_REQUIRED);
   }
@@ -110,7 +114,7 @@ export async function logout(token) {
   await RefreshToken.updateOne({ tokenHash: hashToken(token) }, { $set: { revokedAt: new Date() } });
 }
 
-export async function logoutEverywhere(userId) {
+export async function logoutEverywhere(userId: string) {
   const result = await RefreshToken.updateMany(
     { user: userId, revokedAt: null },
     { $set: { revokedAt: new Date() } }
@@ -121,7 +125,7 @@ export async function logoutEverywhere(userId) {
   return { revoked: result.modifiedCount };
 }
 
-export async function changePassword(userId, { currentPassword, newPassword }) {
+export async function changePassword(userId: string, { currentPassword, newPassword }: ChangePasswordInput) {
   const user = await User.findById(userId).select('+password');
 
   if (!user || !(await user.verifyPassword(currentPassword))) {
@@ -135,7 +139,7 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
   return user;
 }
 
-export async function updateProfile(userId, payload) {
+export async function updateProfile(userId: string, payload: UpdateProfileInput) {
   const user = await User.findByIdAndUpdate(userId, { $set: payload }, { returnDocument: 'after', runValidators: true });
 
   if (!user) {
@@ -145,13 +149,13 @@ export async function updateProfile(userId, payload) {
   return user;
 }
 
-export async function listSessions(userId) {
+export async function listSessions(userId: string) {
   return RefreshToken.find({ user: userId, revokedAt: null })
     .sort({ createdAt: -1 })
     .select('ip userAgent createdAt expiresAt');
 }
 
-export async function revokeSession(userId, sessionId) {
+export async function revokeSession(userId: string, sessionId: string) {
   const session = await RefreshToken.findOneAndUpdate(
     { _id: sessionId, user: userId, revokedAt: null },
     { $set: { revokedAt: new Date() } },

@@ -2,7 +2,7 @@ import mongoose, { type ClientSession } from 'mongoose';
 
 import logger from '../config/logger.js';
 
-export type Session = ClientSession | null;
+export type Session = ClientSession | undefined;
 
 let replicaSetDeployment: boolean | null = null;
 
@@ -30,7 +30,7 @@ export async function supportsTransactions(): Promise<boolean> {
 
 export async function withTransaction<T>(work: (session: Session) => Promise<T>): Promise<T> {
   if (!(await supportsTransactions())) {
-    return work(null);
+    return work(undefined);
   }
 
   const session = await mongoose.startSession();

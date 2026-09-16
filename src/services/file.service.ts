@@ -2,7 +2,6 @@ import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import FileAsset from '../models/fileAsset.model.js';
@@ -10,14 +9,20 @@ import env from '../config/env.js';
 import { FILE_MESSAGES } from '../constants/files.js';
 import { WORKSPACE_ROLE, WORKSPACE_ROLE_RANK } from '../constants/roles.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
+import type { ByteRange } from '../helpers/range.js';
+import type { UploadedFile } from '../types/express.js';
+import type { WorkspaceRole } from '../constants/roles.js';
+import type { ListFilesQuery, UploadInput } from '../validators/file.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
+type Match = Record<string, unknown>;
 
-export function locate(asset) {
+export function locate(asset: { workspace: unknown; storedName: string }): string {
   return path.join(env.UPLOAD_DIR, String(asset.workspace), asset.storedName);
+
 }
 
-export async function registerUpload(workspaceId, uploaderId, upload, meta = {}) {
+export async function registerUpload(workspaceId: string, uploaderId: string, upload: UploadedFile, meta: UploadInput = {}) {
   const existing = await FileAsset.findOne({ workspace: workspaceId, checksum: upload.checksum });
 
   if (existing) {
@@ -40,8 +45,8 @@ export async function registerUpload(workspaceId, uploaderId, upload, meta = {})
   return { asset, deduplicated: false };
 }
 
-export async function listFiles(workspaceId, query) {
-  const match = { workspace: toObjectId(workspaceId) };
+export async function listFiles(workspaceId: string, query: ListFilesQuery) {
+  const match: Match = { workspace: toObjectId(workspaceId) };
 
   if (query.entityType) {
     match.entityType = query.entityType;
@@ -70,7 +75,7 @@ export async function listFiles(workspaceId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function getAsset(workspaceId, fileId) {
+export async function getAsset(workspaceId: string, fileId: string) {
   const asset = await FileAsset.findOne({ _id: fileId, workspace: workspaceId });
 
   if (!asset) {
@@ -80,7 +85,7 @@ export async function getAsset(workspaceId, fileId) {
   return asset;
 }
 
-export async function openDownload(workspaceId, fileId, range) {
+export async function openDownload(workspaceId: string, fileId: string, range: ByteRange | null) {
   const asset = await getAsset(workspaceId, fileId);
   const location = locate(asset);
 
@@ -107,7 +112,7 @@ export async function openDownload(workspaceId, fileId, range) {
   };
 }
 
-export async function deleteFile(workspaceId, fileId, actor) {
+export async function deleteFile(workspaceId: string, fileId: string, actor: { userId: string; role: WorkspaceRole }) {
   const asset = await getAsset(workspaceId, fileId);
   const isUploader = String(asset.uploadedBy) === String(actor.userId);
   const isManager = WORKSPACE_ROLE_RANK[actor.role] >= WORKSPACE_ROLE_RANK[WORKSPACE_ROLE.ADMIN];
@@ -122,7 +127,7 @@ export async function deleteFile(workspaceId, fileId, actor) {
   return { deleted: String(asset._id) };
 }
 
-export async function storageUsage(workspaceId) {
+export async function storageUsage(workspaceId: string) {
   const [usage] = await FileAsset.aggregate([
     { $match: { workspace: toObjectId(workspaceId) } },
     {

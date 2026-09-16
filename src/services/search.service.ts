@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Board from '../models/board.model.js';
@@ -9,13 +8,23 @@ import { CHANNEL_VISIBILITY } from '../constants/channel.js';
 import { SEARCH_MESSAGES } from '../constants/messages.js';
 import { buildMeta, toSkip } from '../helpers/pagination.js';
 import { prefixPattern, toTextQuery } from '../helpers/search.js';
+import type { PipelineStage, Types } from 'mongoose';
+import type { SearchQuery } from '../validators/insight.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
 const SNIPPET_LENGTH = 180;
 const SUGGESTION_LIMIT = 8;
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
 
-async function visibleChannelIds(workspaceId, userId) {
+type UnionStage = Exclude<PipelineStage, PipelineStage.Out | PipelineStage.Merge>;
+
+interface SearchFacet {
+  items: Record<string, unknown>[];
+  counts: { _id: string; count: number }[];
+  total: number;
+}
+
+async function visibleChannelIds(workspaceId: string, userId: string) {
   const [publicChannels, joined] = await Promise.all([
     Channel.find({ workspace: workspaceId, visibility: CHANNEL_VISIBILITY.PUBLIC, archivedAt: null })
       .select('_id')
@@ -32,7 +41,7 @@ async function visibleChannelIds(workspaceId, userId) {
   return [...ids].map(toObjectId);
 }
 
-function pageStage(workspaceId, text) {
+function pageStage(workspaceId: Types.ObjectId, text: string): UnionStage[] {
   return [
     { $match: { workspace: workspaceId, archivedAt: null, $text: { $search: text } } },
     {
@@ -50,7 +59,7 @@ function pageStage(workspaceId, text) {
   ];
 }
 
-function cardStage(workspaceId, text) {
+function cardStage(workspaceId: Types.ObjectId, text: string): UnionStage[] {
   return [
     { $match: { workspace: workspaceId, archivedAt: null, $text: { $search: text } } },
     {
@@ -68,7 +77,7 @@ function cardStage(workspaceId, text) {
   ];
 }
 
-function messageStage(workspaceId, text, channelIds) {
+function messageStage(workspaceId: Types.ObjectId, text: string, channelIds: Types.ObjectId[]): UnionStage[] {
   return [
     {
       $match: {
@@ -93,7 +102,7 @@ function messageStage(workspaceId, text, channelIds) {
   ];
 }
 
-export async function searchWorkspace(workspaceId, userId, query) {
+export async function searchWorkspace(workspaceId: string, userId: string, query: SearchQuery) {
   const text = toTextQuery(query.q);
 
   if (!text) {
@@ -102,7 +111,7 @@ export async function searchWorkspace(workspaceId, userId, query) {
 
   const id = toObjectId(workspaceId);
   const kinds = query.kinds ?? ['page', 'card', 'message'];
-  const unions = [];
+  const unions: PipelineStage.UnionWith[] = [];
 
   if (kinds.includes('card')) {
     unions.push({ $unionWith: { coll: 'cards', pipeline: cardStage(id, text) } });
@@ -113,11 +122,11 @@ export async function searchWorkspace(workspaceId, userId, query) {
     unions.push({ $unionWith: { coll: 'messages', pipeline: messageStage(id, text, channelIds) } });
   }
 
-  const leading = kinds.includes('page')
+  const leading: PipelineStage[] = kinds.includes('page')
     ? pageStage(id, text)
     : [{ $match: { _id: null } }, { $project: { _id: 0 } }];
 
-  const [result] = await Page.aggregate([
+  const [result] = await Page.aggregate<SearchFacet>([
     ...leading,
     ...unions,
     {
@@ -145,7 +154,7 @@ export async function searchWorkspace(workspaceId, userId, query) {
   };
 }
 
-export async function suggest(workspaceId, userId, term) {
+export async function suggest(workspaceId: string, userId: string, term: string) {
   const pattern = prefixPattern(term);
   const id = toObjectId(workspaceId);
 

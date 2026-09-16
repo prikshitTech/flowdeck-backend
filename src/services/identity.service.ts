@@ -4,8 +4,10 @@ import ApiError from '../helpers/apiError.js';
 import User from '../models/user.model.js';
 import { AUTH_MESSAGES } from '../constants/messages.js';
 import { verifyAccessToken } from '../helpers/token.js';
+import type { AccessClaims } from '../helpers/token.js';
+import type { UserDocument } from '../models/user.model.js';
 
-function readClaims(token) {
+function readClaims(token: string): AccessClaims {
   try {
     return verifyAccessToken(token);
   } catch (error) {
@@ -17,7 +19,7 @@ function readClaims(token) {
   }
 }
 
-export async function resolveAccessToken(token) {
+export async function resolveAccessToken(token: string | null): Promise<UserDocument> {
   if (!token) {
     throw ApiError.unauthorized(AUTH_MESSAGES.TOKEN_MISSING);
   }

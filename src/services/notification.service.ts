@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Card from '../models/card.model.js';
@@ -9,18 +8,33 @@ import { NOTIFICATION_MESSAGES } from '../constants/messages.js';
 import { SOCKET_EVENT } from '../constants/events.js';
 import { emitToUser } from '../sockets/emitter.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
+import type { Types } from 'mongoose';
+import type { Id } from '../helpers/objectId.js';
+import type { ListNotificationsQuery } from '../validators/notification.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
+type Match = Record<string, unknown>;
 
 const PREVIEW_LENGTH = 140;
 
-function preview(text) {
+function preview(text: string): string {
   const trimmed = text.trim();
 
   return trimmed.length > PREVIEW_LENGTH ? `${trimmed.slice(0, PREVIEW_LENGTH)}...` : trimmed;
 }
 
-async function deliver(entries) {
+interface NotificationDraft {
+  user: Id;
+  workspace: Id;
+  type: string;
+  title: string;
+  body: string;
+  entityType: string;
+  entityId: Id;
+  actor: Id | null;
+}
+
+async function deliver(entries: NotificationDraft[]) {
   const targets = entries.filter((entry) => String(entry.user) !== String(entry.actor));
 
   if (targets.length === 0) {
@@ -36,8 +50,10 @@ async function deliver(entries) {
   return created;
 }
 
-export async function fanOutMention({ messageId }) {
-  const message = await Message.findById(messageId).populate('author', 'name').lean();
+export async function fanOutMention({ messageId }: { messageId: string }) {
+  const message = await Message.findById(messageId)
+    .populate<{ author: { _id: Types.ObjectId; name: string } }>('author', 'name')
+    .lean();
 
   if (!message || message.mentions.length === 0) {
     return [];
@@ -57,7 +73,7 @@ export async function fanOutMention({ messageId }) {
   );
 }
 
-export async function fanOutAssignment({ cardId, actorId, assignees }) {
+export async function fanOutAssignment({ cardId, actorId, assignees }: { cardId: string; actorId: string; assignees: string[] }) {
   const card = await Card.findById(cardId).lean();
 
   if (!card || !assignees?.length) {
@@ -108,8 +124,8 @@ export async function remindDueCards() {
   return { cards: due.length, notifications: created.length };
 }
 
-export async function listNotifications(userId, query) {
-  const match = { user: toObjectId(userId) };
+export async function listNotifications(userId: string, query: ListNotificationsQuery) {
+  const match: Match = { user: toObjectId(userId) };
 
   if (query.workspace) {
     match.workspace = toObjectId(query.workspace);
@@ -144,7 +160,7 @@ export async function listNotifications(userId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function unreadCount(userId) {
+export async function unreadCount(userId: string) {
   const counts = await Notification.aggregate([
     { $match: { user: toObjectId(userId), readAt: null } },
     { $group: { _id: '$workspace', count: { $sum: 1 } } },
@@ -154,7 +170,7 @@ export async function unreadCount(userId) {
   return { total: counts.reduce((sum, row) => sum + row.count, 0), byWorkspace: counts };
 }
 
-export async function markRead(userId, notificationId) {
+export async function markRead(userId: string, notificationId: string) {
   const notification = await Notification.findOneAndUpdate(
     { _id: notificationId, user: userId, readAt: null },
     { $set: { readAt: new Date() } },
@@ -168,8 +184,8 @@ export async function markRead(userId, notificationId) {
   return notification;
 }
 
-export async function markAllRead(userId, workspaceId) {
-  const filter = { user: userId, readAt: null };
+export async function markAllRead(userId: string, workspaceId?: string) {
+  const filter: Match = { user: userId, readAt: null };
 
   if (workspaceId) {
     filter.workspace = workspaceId;

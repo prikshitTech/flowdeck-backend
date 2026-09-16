@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Channel from '../models/channel.model.js';
@@ -18,14 +17,23 @@ import { paginateStages, sortDirection, unwrapFacet } from '../helpers/paginatio
 import { slugify } from '../helpers/slug.js';
 import { withId, withIds } from '../helpers/present.js';
 import { withTransaction } from '../helpers/transaction.js';
+import type { Id } from '../helpers/objectId.js';
+import type {
+  CreateChannelInput,
+  ListChannelsQuery,
+  ListMessagesQuery,
+  SendMessageInput,
+  UpdateChannelInput
+} from '../validators/channel.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
+type Match = Record<string, unknown>;
 
-function invalidate(workspaceId) {
+function invalidate(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
 }
 
-async function loadChannel(workspaceId, channelId) {
+async function loadChannel(workspaceId: string, channelId: string) {
   const channel = await Channel.findOne({ _id: channelId, workspace: workspaceId, archivedAt: null });
 
   if (!channel) {
@@ -35,7 +43,7 @@ async function loadChannel(workspaceId, channelId) {
   return channel;
 }
 
-export async function assertCanRead(workspaceId, channelId, userId) {
+export async function assertCanRead(workspaceId: string, channelId: string, userId: string) {
   const channel = await loadChannel(workspaceId, channelId);
   const membership = await ChannelMember.findOne({ channel: channel._id, user: userId }).lean();
 
@@ -46,7 +54,7 @@ export async function assertCanRead(workspaceId, channelId, userId) {
   return { channel, membership };
 }
 
-async function assertCanPost(workspaceId, channelId, userId) {
+async function assertCanPost(workspaceId: string, channelId: string, userId: string) {
   const { channel, membership } = await assertCanRead(workspaceId, channelId, userId);
 
   if (!membership) {
@@ -56,7 +64,7 @@ async function assertCanPost(workspaceId, channelId, userId) {
   return { channel, membership };
 }
 
-export async function createChannel(workspaceId, authorId, payload) {
+export async function createChannel(workspaceId: string, authorId: string, payload: CreateChannelInput) {
   const slug = slugify(payload.name);
   const taken = await Channel.exists({ workspace: workspaceId, slug });
 
@@ -82,8 +90,8 @@ export async function createChannel(workspaceId, authorId, payload) {
   return channel;
 }
 
-export async function listChannels(workspaceId, userId, query) {
-  const match = { workspace: toObjectId(workspaceId), archivedAt: null };
+export async function listChannels(workspaceId: string, userId: string, query: ListChannelsQuery) {
+  const match: Match = { workspace: toObjectId(workspaceId), archivedAt: null };
 
   if (query.mine) {
     const joined = await ChannelMember.find({ workspace: workspaceId, user: userId }).select('channel').lean();
@@ -131,12 +139,12 @@ export async function listChannels(workspaceId, userId, query) {
   return unwrapFacet(result, query);
 }
 
-async function joinedChannelIds(workspaceId, userId) {
+async function joinedChannelIds(workspaceId: string, userId: string) {
   const rows = await ChannelMember.find({ workspace: workspaceId, user: userId }).select('channel').lean();
   return rows.map((row) => row.channel);
 }
 
-export async function getChannel(workspaceId, channelId, userId) {
+export async function getChannel(workspaceId: string, channelId: string, userId: string) {
   const { channel, membership } = await assertCanRead(workspaceId, channelId, userId);
   const unread = membership?.lastReadAt
     ? await Message.countDocuments({
@@ -149,7 +157,7 @@ export async function getChannel(workspaceId, channelId, userId) {
   return { ...channel.toJSON(), joined: Boolean(membership), unread };
 }
 
-export async function updateChannel(workspaceId, channelId, userId, payload) {
+export async function updateChannel(workspaceId: string, channelId: string, userId: string, payload: UpdateChannelInput) {
   await assertCanPost(workspaceId, channelId, userId);
 
   const channel = await Channel.findOneAndUpdate(
@@ -162,7 +170,7 @@ export async function updateChannel(workspaceId, channelId, userId, payload) {
   return channel;
 }
 
-export async function archiveChannel(workspaceId, channelId) {
+export async function archiveChannel(workspaceId: string, channelId: string) {
   const channel = await loadChannel(workspaceId, channelId);
 
   channel.archivedAt = new Date();
@@ -172,7 +180,7 @@ export async function archiveChannel(workspaceId, channelId) {
   return { archived: String(channel._id) };
 }
 
-export async function joinChannel(workspaceId, channelId, userId) {
+export async function joinChannel(workspaceId: string, channelId: string, userId: string) {
   const channel = await loadChannel(workspaceId, channelId);
 
   if (channel.visibility === CHANNEL_VISIBILITY.PRIVATE) {
@@ -198,7 +206,7 @@ export async function joinChannel(workspaceId, channelId, userId) {
   return { channel: String(channel._id), joined: true };
 }
 
-export async function leaveChannel(workspaceId, channelId, userId) {
+export async function leaveChannel(workspaceId: string, channelId: string, userId: string) {
   const channel = await loadChannel(workspaceId, channelId);
   const membership = await ChannelMember.findOne({ channel: channel._id, user: userId });
 
@@ -215,7 +223,7 @@ export async function leaveChannel(workspaceId, channelId, userId) {
   return { channel: String(channel._id), joined: false };
 }
 
-export async function markRead(workspaceId, channelId, userId) {
+export async function markRead(workspaceId: string, channelId: string, userId: string) {
   const { channel } = await assertCanPost(workspaceId, channelId, userId);
 
   await ChannelMember.updateOne(
@@ -226,10 +234,10 @@ export async function markRead(workspaceId, channelId, userId) {
   return { channel: String(channel._id), unread: 0 };
 }
 
-export async function listMessages(workspaceId, channelId, userId, query) {
+export async function listMessages(workspaceId: string, channelId: string, userId: string, query: ListMessagesQuery) {
   const { channel } = await assertCanRead(workspaceId, channelId, userId);
 
-  const filter = { channel: channel._id, deletedAt: null, parent: query.parent ?? null };
+  const filter: Match = { channel: channel._id, deletedAt: null, parent: query.parent ?? null };
 
   if (query.before) {
     filter._id = { $lt: toObjectId(query.before) };
@@ -246,11 +254,11 @@ export async function listMessages(workspaceId, channelId, userId, query) {
 
   return {
     items: withIds(page).reverse(),
-    cursor: { hasMore, next: hasMore ? String(page.at(-1)._id) : null }
+    cursor: { hasMore, next: hasMore ? String(page[page.length - 1]._id) : null }
   };
 }
 
-export async function sendMessage(workspaceId, channelId, authorId, payload) {
+export async function sendMessage(workspaceId: string, channelId: string, authorId: string, payload: SendMessageInput) {
   const { channel } = await assertCanPost(workspaceId, channelId, authorId);
 
   if (payload.mentions?.length) {
@@ -300,7 +308,7 @@ export async function sendMessage(workspaceId, channelId, authorId, payload) {
   return message;
 }
 
-async function loadOwnMessage(channelId, messageId, userId) {
+async function loadOwnMessage(channelId: Id, messageId: string, userId: string) {
   const message = await Message.findOne({ _id: messageId, channel: channelId, deletedAt: null });
 
   if (!message) {
@@ -314,7 +322,7 @@ async function loadOwnMessage(channelId, messageId, userId) {
   return message;
 }
 
-export async function editMessage(workspaceId, channelId, messageId, userId, body) {
+export async function editMessage(workspaceId: string, channelId: string, messageId: string, userId: string, body: string) {
   const { channel } = await assertCanPost(workspaceId, channelId, userId);
   const message = await loadOwnMessage(channel._id, messageId, userId);
 
@@ -326,7 +334,7 @@ export async function editMessage(workspaceId, channelId, messageId, userId, bod
   return message;
 }
 
-export async function deleteMessage(workspaceId, channelId, messageId, userId) {
+export async function deleteMessage(workspaceId: string, channelId: string, messageId: string, userId: string) {
   const { channel } = await assertCanPost(workspaceId, channelId, userId);
   const message = await loadOwnMessage(channel._id, messageId, userId);
 
@@ -346,8 +354,10 @@ export async function deleteMessage(workspaceId, channelId, messageId, userId) {
   return { deleted: String(message._id) };
 }
 
-export async function toggleReaction(workspaceId, channelId, messageId, userId, emoji) {
-  if (!ALLOWED_REACTIONS.includes(emoji)) {
+export async function toggleReaction(workspaceId: string, channelId: string, messageId: string, userId: string, emoji: string) {
+  const allowed: readonly string[] = ALLOWED_REACTIONS;
+
+  if (!allowed.includes(emoji)) {
     throw ApiError.badRequest(`Reaction must be one of ${ALLOWED_REACTIONS.join(', ')}`);
   }
 
@@ -361,14 +371,14 @@ export async function toggleReaction(workspaceId, channelId, messageId, userId, 
   const existing = message.reactions.find((reaction) => reaction.emoji === emoji);
 
   if (!existing) {
-    message.reactions.push({ emoji, users: [userId] });
+    message.reactions.push({ emoji, users: [toObjectId(userId)] });
   } else if (existing.users.some((id) => String(id) === String(userId))) {
     existing.users = existing.users.filter((id) => String(id) !== String(userId));
   } else {
-    existing.users.push(userId);
+    existing.users.push(toObjectId(userId));
   }
 
-  message.reactions = message.reactions.filter((reaction) => reaction.users.length > 0);
+  message.set('reactions', message.reactions.filter((reaction) => reaction.users.length > 0));
   await message.save();
 
   const payload = withId(message.toObject());

@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Page from '../models/page.model.js';
@@ -11,16 +10,27 @@ import { emitToWorkspace } from '../sockets/emitter.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { withId, withIds } from '../helpers/present.js';
 import { withTransaction } from '../helpers/transaction.js';
+import type { Types } from 'mongoose';
+import type { Id } from '../helpers/objectId.js';
+import type {
+  CreatePageInput,
+  ListPagesQuery,
+  ListRevisionsQuery,
+  MovePageInput,
+  ReorderPagesInput,
+  UpdatePageInput
+} from '../validators/page.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
+
+type Match = Record<string, unknown>;
 
 const MAX_DEPTH = 8;
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
-
-function invalidate(workspaceId) {
+function invalidate(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
 }
 
-async function loadPage(workspaceId, pageId) {
+async function loadPage(workspaceId: string, pageId: Id) {
   const page = await Page.findOne({ _id: pageId, workspace: workspaceId });
 
   if (!page || page.archivedAt) {
@@ -30,9 +40,9 @@ async function loadPage(workspaceId, pageId) {
   return page;
 }
 
-async function resolveParent(workspaceId, parentId) {
+async function resolveParent(workspaceId: string, parentId: string | null | undefined) {
   if (!parentId) {
-    return { parent: null, path: [] };
+    return { parent: null, path: [] as Types.ObjectId[] };
   }
 
   const parent = await loadPage(workspaceId, parentId);
@@ -44,9 +54,19 @@ async function resolveParent(workspaceId, parentId) {
   return { parent: parent._id, path: [...parent.path, parent._id] };
 }
 
-function nest(rows) {
-  const byId = new Map(rows.map((row) => [String(row.id), { ...row, children: [] }]));
-  const roots = [];
+export interface TreeNode {
+  id: string;
+  parent: string | null;
+  title: string;
+  icon: string | null;
+  position: number;
+  depth: number;
+  children: TreeNode[];
+}
+
+function nest(rows: Omit<TreeNode, 'children'>[]): TreeNode[] {
+  const byId = new Map<string, TreeNode>(rows.map((row) => [row.id, { ...row, children: [] }]));
+  const roots: TreeNode[] = [];
 
   for (const node of byId.values()) {
     const parent = node.parent ? byId.get(String(node.parent)) : null;
@@ -61,7 +81,7 @@ function nest(rows) {
   return roots;
 }
 
-export async function createPage(workspaceId, authorId, payload) {
+export async function createPage(workspaceId: string, authorId: string, payload: CreatePageInput) {
   const { parent, path } = await resolveParent(workspaceId, payload.parent);
 
   const siblings = await Page.countDocuments({ workspace: workspaceId, parent, archivedAt: null });
@@ -82,8 +102,8 @@ export async function createPage(workspaceId, authorId, payload) {
   return page;
 }
 
-export async function listPages(workspaceId, query) {
-  const match = { workspace: toObjectId(workspaceId), archivedAt: null };
+export async function listPages(workspaceId: string, query: ListPagesQuery) {
+  const match: Match = { workspace: toObjectId(workspaceId), archivedAt: null };
 
   if (query.parent) {
     match.parent = toObjectId(query.parent);
@@ -113,7 +133,7 @@ export async function listPages(workspaceId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function pageTree(workspaceId) {
+export async function pageTree(workspaceId: string): Promise<TreeNode[]> {
   return remember(cacheKey.pageTree(workspaceId), CACHE_TTL.SHORT, async () => {
     const rows = await Page.aggregate([
       { $match: { workspace: toObjectId(workspaceId), archivedAt: null } },
@@ -135,7 +155,7 @@ export async function pageTree(workspaceId) {
   });
 }
 
-export async function getPage(workspaceId, pageId) {
+export async function getPage(workspaceId: string, pageId: string) {
   const page = await Page.findOne({ _id: pageId, workspace: workspaceId, archivedAt: null })
     .populate('createdBy updatedBy', 'name email avatarUrl')
     .lean();
@@ -149,7 +169,7 @@ export async function getPage(workspaceId, pageId) {
   return { ...withId(page), breadcrumb: withIds(breadcrumb) };
 }
 
-export async function updatePage(workspaceId, pageId, editorId, payload) {
+export async function updatePage(workspaceId: string, pageId: string, editorId: string, payload: UpdatePageInput) {
   const page = await loadPage(workspaceId, pageId);
 
   const updated = await withTransaction(async (session) => {
@@ -183,7 +203,7 @@ export async function updatePage(workspaceId, pageId, editorId, payload) {
   return updated;
 }
 
-export async function movePage(workspaceId, pageId, { parent: nextParentId, position }) {
+export async function movePage(workspaceId: string, pageId: string, { parent: nextParentId, position }: MovePageInput) {
   const page = await loadPage(workspaceId, pageId);
 
   if (nextParentId && String(nextParentId) === String(pageId)) {
@@ -220,7 +240,7 @@ export async function movePage(workspaceId, pageId, { parent: nextParentId, posi
   return page;
 }
 
-export async function reorderPages(workspaceId, entries) {
+export async function reorderPages(workspaceId: string, entries: ReorderPagesInput['entries']) {
   await Page.bulkWrite(
     entries.map((entry) => ({
       updateOne: {
@@ -234,7 +254,7 @@ export async function reorderPages(workspaceId, entries) {
   return { reordered: entries.length };
 }
 
-export async function archivePage(workspaceId, pageId) {
+export async function archivePage(workspaceId: string, pageId: string) {
   const page = await loadPage(workspaceId, pageId);
   const archivedAt = new Date();
 
@@ -252,7 +272,7 @@ export async function archivePage(workspaceId, pageId) {
   return { archived: affected };
 }
 
-export async function listRevisions(workspaceId, pageId, query) {
+export async function listRevisions(workspaceId: string, pageId: string, query: ListRevisionsQuery) {
   await loadPage(workspaceId, pageId);
 
   const result = await PageRevision.aggregate([
@@ -275,7 +295,7 @@ export async function listRevisions(workspaceId, pageId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function restoreRevision(workspaceId, pageId, version, editorId) {
+export async function restoreRevision(workspaceId: string, pageId: string, version: number, editorId: string) {
   const page = await loadPage(workspaceId, pageId);
   const revision = await PageRevision.findOne({ page: page._id, version });
 

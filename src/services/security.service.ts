@@ -6,7 +6,7 @@ import { cacheKey } from '../constants/cacheKeys.js';
 import { bump, countOf, drop, hasFlag, markFlag, secondsLeft } from './cache.service.js';
 import { clientKey } from '../helpers/network.js';
 
-export async function assertIpAllowed(address) {
+export async function assertIpAllowed(address: string | null | undefined) {
   const ip = clientKey(address);
 
   if (await hasFlag(cacheKey.blockedIp(ip))) {
@@ -15,7 +15,7 @@ export async function assertIpAllowed(address) {
   }
 }
 
-export async function assertLoginAllowed(email, address) {
+export async function assertLoginAllowed(email: string, address: string | null) {
   const ip = clientKey(address);
 
   const [byEmail, byIp] = await Promise.all([
@@ -33,7 +33,7 @@ export async function assertLoginAllowed(email, address) {
   throw ApiError.tooManyRequests(`Too many failed attempts, try again in ${retryAfter} seconds`, { retryAfter });
 }
 
-export async function recordLoginFailure(email, address) {
+export async function recordLoginFailure(email: string, address: string | null) {
   const ip = clientKey(address);
 
   const [byEmail, byIp] = await Promise.all([
@@ -49,20 +49,20 @@ export async function recordLoginFailure(email, address) {
   return { byEmail, byIp, remaining: Math.max(env.LOGIN_MAX_ATTEMPTS - byEmail, 0) };
 }
 
-export async function clearLoginFailures(email, address) {
+export async function clearLoginFailures(email: string, address: string | null) {
   const ip = clientKey(address);
 
   await drop(cacheKey.loginFailuresByEmail(email), cacheKey.loginFailuresByIp(ip));
 }
 
-export async function blockAddress(address, seconds = env.IP_BLOCK_SECONDS) {
+export async function blockAddress(address: string, seconds = env.IP_BLOCK_SECONDS) {
   const ip = clientKey(address);
 
   await markFlag(cacheKey.blockedIp(ip), seconds);
   return { ip, blockedForSeconds: seconds };
 }
 
-export async function unblockAddress(address) {
+export async function unblockAddress(address: string) {
   const ip = clientKey(address);
 
   await drop(cacheKey.blockedIp(ip), cacheKey.loginFailuresByIp(ip));

@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Membership from '../models/membership.model.js';
@@ -13,14 +12,22 @@ import { paginateStages, sortDirection, unwrapFacet } from '../helpers/paginatio
 import { withId } from '../helpers/present.js';
 import { uniqueSlug } from '../helpers/slug.js';
 import { withTransaction } from '../helpers/transaction.js';
+import type { WorkspaceRole } from '../constants/roles.js';
+import type {
+  AddMemberInput,
+  CreateWorkspaceInput,
+  ListMembersQuery,
+  ListWorkspacesQuery,
+  UpdateWorkspaceInput
+} from '../validators/workspace.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
 
-function invalidateWorkspace(workspaceId) {
+function invalidateWorkspace(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
 }
 
-export async function createWorkspace(ownerId, payload) {
+export async function createWorkspace(ownerId: string, payload: CreateWorkspaceInput) {
   return withTransaction(async (session) => {
     const [workspace] = await Workspace.create(
       [{ ...payload, slug: uniqueSlug(payload.name), owner: ownerId, memberCount: 1 }],
@@ -36,7 +43,7 @@ export async function createWorkspace(ownerId, payload) {
   });
 }
 
-export async function listWorkspaces(userId, query) {
+export async function listWorkspaces(userId: string, query: ListWorkspacesQuery) {
   const result = await Membership.aggregate([
     { $match: { user: toObjectId(userId) } },
     { $lookup: { from: 'workspaces', localField: 'workspace', foreignField: '_id', as: 'workspace' } },
@@ -62,7 +69,7 @@ export async function listWorkspaces(userId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function getWorkspace(workspaceId) {
+export async function getWorkspace(workspaceId: string) {
   return remember(cacheKey.workspaceSummary(workspaceId), CACHE_TTL.MEDIUM, async () => {
     const workspace = await Workspace.findById(workspaceId).populate('owner', 'name email avatarUrl').lean();
 
@@ -74,7 +81,7 @@ export async function getWorkspace(workspaceId) {
   });
 }
 
-export async function updateWorkspace(workspaceId, payload) {
+export async function updateWorkspace(workspaceId: string, payload: UpdateWorkspaceInput) {
   const workspace = await Workspace.findByIdAndUpdate(
     workspaceId,
     { $set: payload },
@@ -89,7 +96,7 @@ export async function updateWorkspace(workspaceId, payload) {
   return workspace;
 }
 
-export async function archiveWorkspace(workspaceId) {
+export async function archiveWorkspace(workspaceId: string) {
   const workspace = await Workspace.findByIdAndUpdate(
     workspaceId,
     { $set: { archivedAt: new Date() } },
@@ -104,7 +111,7 @@ export async function archiveWorkspace(workspaceId) {
   return workspace;
 }
 
-export async function listMembers(workspaceId, query) {
+export async function listMembers(workspaceId: string, query: ListMembersQuery) {
   const result = await Membership.aggregate([
     { $match: { workspace: toObjectId(workspaceId) } },
     { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'account' } },
@@ -132,11 +139,7 @@ export async function listMembers(workspaceId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function addMember(workspaceId, actorId, { email, role }) {
-  if (role === WORKSPACE_ROLE.OWNER) {
-    throw ApiError.badRequest(WORKSPACE_MESSAGES.OWNER_ROLE_LOCKED);
-  }
-
+export async function addMember(workspaceId: string, actorId: string, { email, role }: AddMemberInput) {
   const account = await User.findOne({ email }).select('name email avatarUrl');
 
   if (!account) {
@@ -164,7 +167,7 @@ export async function addMember(workspaceId, actorId, { email, role }) {
   return { membership, account };
 }
 
-export async function updateMemberRole(workspaceId, memberUserId, role) {
+export async function updateMemberRole(workspaceId: string, memberUserId: string, role: WorkspaceRole) {
   if (role === WORKSPACE_ROLE.OWNER) {
     throw ApiError.badRequest(WORKSPACE_MESSAGES.OWNER_ROLE_LOCKED);
   }
@@ -186,7 +189,7 @@ export async function updateMemberRole(workspaceId, memberUserId, role) {
   return membership;
 }
 
-export async function removeMember(workspaceId, memberUserId) {
+export async function removeMember(workspaceId: string, memberUserId: string) {
   const membership = await Membership.findOne({ workspace: workspaceId, user: memberUserId });
 
   if (!membership) {
@@ -206,7 +209,7 @@ export async function removeMember(workspaceId, memberUserId) {
   return { removed: String(memberUserId) };
 }
 
-export async function transferOwnership(workspaceId, currentOwnerId, nextOwnerId) {
+export async function transferOwnership(workspaceId: string, currentOwnerId: string, nextOwnerId: string) {
   const nextOwner = await Membership.findOne({ workspace: workspaceId, user: nextOwnerId });
 
   if (!nextOwner) {
@@ -238,7 +241,7 @@ export async function transferOwnership(workspaceId, currentOwnerId, nextOwnerId
   return { workspace: String(workspaceId), owner: String(nextOwnerId) };
 }
 
-export async function leaveWorkspace(workspaceId, userId) {
+export async function leaveWorkspace(workspaceId: string, userId: string) {
   const membership = await Membership.findOne({ workspace: workspaceId, user: userId });
 
   if (!membership) {

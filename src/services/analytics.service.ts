@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import Board from '../models/board.model.js';
 import Card from '../models/card.model.js';
@@ -7,12 +6,13 @@ import Message from '../models/message.model.js';
 import Page from '../models/page.model.js';
 import { CACHE_TTL, cacheKey } from '../constants/cacheKeys.js';
 import { remember } from './cache.service.js';
+import type { PipelineStage } from 'mongoose';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-function dayBuckets(dateField) {
+function dayBuckets(dateField: string): PipelineStage.FacetPipelineStage[] {
   return [
     { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: dateField } }, count: { $sum: 1 } } },
     { $sort: { _id: 1 } },
@@ -20,7 +20,7 @@ function dayBuckets(dateField) {
   ];
 }
 
-export async function workspaceOverview(workspaceId, days) {
+export async function workspaceOverview(workspaceId: string, days: number) {
   return remember(cacheKey.workspaceAnalytics(workspaceId, days), CACHE_TTL.MEDIUM, async () => {
     const id = toObjectId(workspaceId);
     const since = new Date(Date.now() - days * DAY_IN_MS);
@@ -95,7 +95,7 @@ export async function workspaceOverview(workspaceId, days) {
   });
 }
 
-export async function boardThroughput(workspaceId, boardId) {
+export async function boardThroughput(workspaceId: string, boardId: string) {
   const [board] = await Board.aggregate([
     { $match: { _id: toObjectId(boardId), workspace: toObjectId(workspaceId) } },
     {
@@ -164,7 +164,7 @@ export async function boardThroughput(workspaceId, boardId) {
   };
 }
 
-export async function memberActivity(workspaceId, days) {
+export async function memberActivity(workspaceId: string, days: number) {
   const id = toObjectId(workspaceId);
   const since = new Date(Date.now() - days * DAY_IN_MS);
 

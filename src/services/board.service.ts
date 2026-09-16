@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 
 import ApiError from '../helpers/apiError.js';
 import Board from '../models/board.model.js';
@@ -16,14 +15,27 @@ import { fanOutAssignment } from './notification.service.js';
 import { dropByPrefix, remember } from './cache.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { withTransaction } from '../helpers/transaction.js';
+import type { Id } from '../helpers/objectId.js';
+import type {
+  CreateBoardInput,
+  CreateCardInput,
+  CreateListInput,
+  ListBoardsQuery,
+  ListCardsQuery,
+  MoveCardInput,
+  UpdateBoardInput,
+  UpdateCardInput,
+  UpdateListInput
+} from '../validators/board.validator.js';
+import { toObjectId } from '../helpers/objectId.js';
 
-const toObjectId = (value) => new mongoose.Types.ObjectId(String(value));
+type Match = Record<string, unknown>;
 
-function invalidate(workspaceId) {
+function invalidate(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
 }
 
-async function loadBoard(workspaceId, boardId) {
+async function loadBoard(workspaceId: string, boardId: string) {
   const board = await Board.findOne({ _id: boardId, workspace: workspaceId, archivedAt: null });
 
   if (!board) {
@@ -33,7 +45,7 @@ async function loadBoard(workspaceId, boardId) {
   return board;
 }
 
-async function loadList(boardId, listId) {
+async function loadList(boardId: string, listId: Id) {
   const list = await BoardList.findOne({ _id: listId, board: boardId, archivedAt: null });
 
   if (!list) {
@@ -43,7 +55,7 @@ async function loadList(boardId, listId) {
   return list;
 }
 
-async function loadCard(boardId, cardId) {
+async function loadCard(boardId: string, cardId: string) {
   const card = await Card.findOne({ _id: cardId, board: boardId, archivedAt: null });
 
   if (!card) {
@@ -53,7 +65,7 @@ async function loadCard(boardId, cardId) {
   return card;
 }
 
-async function assertMembers(workspaceId, userIds) {
+async function assertMembers(workspaceId: string, userIds: string[] | undefined) {
   if (!userIds || userIds.length === 0) {
     return;
   }
@@ -65,7 +77,7 @@ async function assertMembers(workspaceId, userIds) {
   }
 }
 
-export async function createBoard(workspaceId, authorId, payload) {
+export async function createBoard(workspaceId: string, authorId: string, payload: CreateBoardInput) {
   const board = await withTransaction(async (session) => {
     const [created] = await Board.create(
       [{ ...payload, workspace: workspaceId, createdBy: authorId }],
@@ -89,7 +101,7 @@ export async function createBoard(workspaceId, authorId, payload) {
   return board;
 }
 
-export async function listBoards(workspaceId, query) {
+export async function listBoards(workspaceId: string, query: ListBoardsQuery) {
   const result = await Board.aggregate([
     { $match: { workspace: toObjectId(workspaceId), archivedAt: null } },
     {
@@ -122,7 +134,7 @@ export async function listBoards(workspaceId, query) {
   return unwrapFacet(result, query);
 }
 
-export async function boardSnapshot(workspaceId, boardId) {
+export async function boardSnapshot(workspaceId: string, boardId: string) {
   await loadBoard(workspaceId, boardId);
 
   return remember(cacheKey.boardSnapshot(boardId), CACHE_TTL.SHORT, async () => {
@@ -171,7 +183,7 @@ export async function boardSnapshot(workspaceId, boardId) {
   });
 }
 
-export async function updateBoard(workspaceId, boardId, payload) {
+export async function updateBoard(workspaceId: string, boardId: string, payload: UpdateBoardInput) {
   const board = await loadBoard(workspaceId, boardId);
 
   board.set(payload);
@@ -181,7 +193,7 @@ export async function updateBoard(workspaceId, boardId, payload) {
   return board;
 }
 
-export async function archiveBoard(workspaceId, boardId) {
+export async function archiveBoard(workspaceId: string, boardId: string) {
   const board = await loadBoard(workspaceId, boardId);
   const archivedAt = new Date();
 
@@ -195,7 +207,7 @@ export async function archiveBoard(workspaceId, boardId) {
   return { archived: String(board._id) };
 }
 
-export async function createList(workspaceId, boardId, payload) {
+export async function createList(workspaceId: string, boardId: string, payload: CreateListInput) {
   const board = await loadBoard(workspaceId, boardId);
   const position = await BoardList.countDocuments({ board: board._id, archivedAt: null });
 
@@ -205,7 +217,7 @@ export async function createList(workspaceId, boardId, payload) {
   return list;
 }
 
-export async function updateList(workspaceId, boardId, listId, payload) {
+export async function updateList(workspaceId: string, boardId: string, listId: string, payload: UpdateListInput) {
   await loadBoard(workspaceId, boardId);
   const list = await loadList(boardId, listId);
 
@@ -216,7 +228,7 @@ export async function updateList(workspaceId, boardId, listId, payload) {
   return list;
 }
 
-export async function archiveList(workspaceId, boardId, listId) {
+export async function archiveList(workspaceId: string, boardId: string, listId: string) {
   await loadBoard(workspaceId, boardId);
   const list = await loadList(boardId, listId);
   const archivedAt = new Date();
@@ -235,7 +247,7 @@ export async function archiveList(workspaceId, boardId, listId) {
   return { archived: String(list._id) };
 }
 
-export async function createCard(workspaceId, boardId, authorId, payload) {
+export async function createCard(workspaceId: string, boardId: string, authorId: string, payload: CreateCardInput) {
   await loadBoard(workspaceId, boardId);
   const list = await loadList(boardId, payload.list);
   await assertMembers(workspaceId, payload.assignees);
@@ -263,7 +275,7 @@ export async function createCard(workspaceId, boardId, authorId, payload) {
   return card;
 }
 
-async function announceAssignment(card, actorId, assignees) {
+async function announceAssignment(card: { _id: unknown }, actorId: string, assignees: string[] | undefined) {
   if (!assignees?.length) {
     return;
   }
@@ -276,7 +288,7 @@ async function announceAssignment(card, actorId, assignees) {
   );
 }
 
-export async function updateCard(workspaceId, boardId, cardId, payload) {
+export async function updateCard(workspaceId: string, boardId: string, cardId: string, payload: UpdateCardInput) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
   await assertMembers(workspaceId, payload.assignees);
@@ -295,7 +307,7 @@ export async function updateCard(workspaceId, boardId, cardId, payload) {
   return card;
 }
 
-export async function moveCard(workspaceId, boardId, cardId, { list: targetListId, position }) {
+export async function moveCard(workspaceId: string, boardId: string, cardId: string, { list: targetListId, position }: MoveCardInput) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
   const target = await loadList(boardId, targetListId ?? card.list);
@@ -338,7 +350,7 @@ export async function moveCard(workspaceId, boardId, cardId, { list: targetListI
   return card;
 }
 
-export async function archiveCard(workspaceId, boardId, cardId) {
+export async function archiveCard(workspaceId: string, boardId: string, cardId: string) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
 
@@ -357,10 +369,10 @@ export async function archiveCard(workspaceId, boardId, cardId) {
   return { archived: String(card._id) };
 }
 
-export async function listCards(workspaceId, boardId, query) {
+export async function listCards(workspaceId: string, boardId: string, query: ListCardsQuery) {
   await loadBoard(workspaceId, boardId);
 
-  const match = { board: toObjectId(boardId), archivedAt: null };
+  const match: Match = { board: toObjectId(boardId), archivedAt: null };
 
   if (query.list) {
     match.list = toObjectId(query.list);
