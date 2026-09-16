@@ -22,6 +22,20 @@ describe('boards', () => {
     expect(lists.every((list) => list.cards.length === 0)).toBe(true);
   });
 
+  it('includes card descriptions in the board snapshot so editing a card keeps them', async () => {
+    const { owner, workspace, url } = await setupWorkspace();
+    const { board, lists } = await createBoardWithLists(owner, workspace.id);
+
+    await api()
+      .post(url(`/boards/${board.id}/cards`))
+      .set(owner.headers)
+      .send({ list: lists[0].id, title: 'Documented', description: 'steps to reproduce' });
+
+    const snapshot = await api().get(url(`/boards/${board.id}`)).set(owner.headers);
+
+    expect(snapshot.body.data.lists[0].cards[0].description).toBe('steps to reproduce');
+  });
+
   it('only assigns cards to workspace members', async () => {
     const { owner, member, outsider, workspace, url } = await setupWorkspace();
     const { board, lists } = await createBoardWithLists(owner, workspace.id);

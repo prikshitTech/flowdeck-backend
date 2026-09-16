@@ -159,6 +159,7 @@ export async function boardSnapshot(workspaceId: string, boardId: string) {
                       _id: 0,
                       id: '$_id',
                       title: 1,
+                      description: 1,
                       position: 1,
                       priority: 1,
                       labels: 1,
