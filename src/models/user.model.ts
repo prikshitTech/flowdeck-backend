@@ -1,12 +1,35 @@
-import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import mongoose, { type HydratedDocument, type Model } from 'mongoose';
 
 import serialize from './plugins/serialize.js';
-import { ACCOUNT_STATUS, SYSTEM_ROLE } from '../constants/roles.js';
+import { ACCOUNT_STATUS, SYSTEM_ROLE, type AccountStatus, type SystemRole } from '../constants/roles.js';
 
 const HASH_ROUNDS = 12;
 
-const userSchema = new mongoose.Schema(
+export interface UserFields {
+  name: string;
+  email: string;
+  password: string;
+  avatarUrl: string | null;
+  role: SystemRole;
+  status: AccountStatus;
+  lastLoginAt: Date | null;
+  passwordChangedAt: Date | null;
+  tokenVersion: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface UserMethods {
+  verifyPassword(plainText: string): Promise<boolean>;
+  isActive(): boolean;
+}
+
+type UserModel = Model<UserFields, object, UserMethods>;
+
+export type UserDocument = HydratedDocument<UserFields, UserMethods>;
+
+const userSchema = new mongoose.Schema<UserFields, UserModel, UserMethods>(
   {
     name: { type: String, required: true, trim: true, maxlength: 80 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -33,14 +56,14 @@ userSchema.pre('save', async function hashPassword() {
   this.passwordChangedAt = new Date();
 });
 
-userSchema.methods.verifyPassword = function verifyPassword(plainText) {
+userSchema.method('verifyPassword', function verifyPassword(this: UserDocument, plainText: string) {
   return bcrypt.compare(plainText, this.password);
-};
+});
 
-userSchema.methods.isActive = function isActive() {
+userSchema.method('isActive', function isActive(this: UserDocument) {
   return this.status === ACCOUNT_STATUS.ACTIVE;
-};
+});
 
 userSchema.plugin(serialize);
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model<UserFields, UserModel>('User', userSchema);

@@ -1,3 +1,4 @@
+import type { UserDocument } from '../models/user.model.js';
 import type { WorkspaceRole } from '../constants/roles.js';
 
 export interface AuthContext {
@@ -22,7 +23,7 @@ export interface UploadedFile {
 declare global {
   namespace Express {
     interface Request {
-      user?: unknown;
+      user?: UserDocument;
       auth: AuthContext;
       workspaceId: string;
       membership: MembershipContext;
