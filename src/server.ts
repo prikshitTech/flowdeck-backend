@@ -10,11 +10,11 @@ import { routeAuditsThroughQueue, scheduleRecurringJobs, startWorkers, stopWorke
 
 async function bootstrap() {
   await connectDatabase();
-  await connectRedis();
+  const redisReady = await connectRedis();
 
   routeAuditsThroughQueue();
 
-  if (env.RUN_WORKERS_IN_API) {
+  if (env.RUN_WORKERS_IN_API && redisReady) {
     startWorkers();
     await scheduleRecurringJobs();
   }

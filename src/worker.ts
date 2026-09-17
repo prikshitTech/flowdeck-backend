@@ -5,7 +5,10 @@ import { scheduleRecurringJobs, startWorkers, stopWorkers } from './queues/boots
 
 async function bootstrap() {
   await connectDatabase();
-  await connectRedis();
+
+  if (!(await connectRedis())) {
+    throw new Error('queue workers need redis, check REDIS_URL');
+  }
 
   startWorkers();
   await scheduleRecurringJobs();

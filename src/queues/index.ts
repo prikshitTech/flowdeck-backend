@@ -1,7 +1,7 @@
 import { Queue, type RepeatOptions } from 'bullmq';
 
 import logger from '../config/logger.js';
-import { createRedisClient } from '../config/redis.js';
+import { createRedisClient, redis } from '../config/redis.js';
 import { JOB_DEFAULTS, QUEUE, type QueueName } from '../constants/queues.js';
 
 interface EnqueueOptions<T> {
@@ -36,10 +36,14 @@ export async function enqueue<T>(
   { runInline }: EnqueueOptions<T> = {}
 ): Promise<boolean> {
   try {
+    if (redis.status !== 'ready') {
+      throw new Error('redis is not connected');
+    }
+
     await queueFor(name).add(jobName, payload);
     return true;
   } catch (error) {
-    logger.warn({ err: error, queue: name, job: jobName }, 'could not enqueue job, handling inline');
+    logger.debug({ err: error, queue: name, job: jobName }, 'could not enqueue job, handling inline');
 
     if (runInline) {
       await runInline(payload);

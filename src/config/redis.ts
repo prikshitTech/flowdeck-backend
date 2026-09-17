@@ -14,17 +14,37 @@ export function createRedisClient(options: RedisOptions = {}): Redis {
     ...options
   });
 
-  client.on('error', (error: Error) => logger.error({ err: error }, 'redis error'));
+  let outageReported = false;
+
+  client.on('error', (error: Error) => {
+    if (!outageReported) {
+      outageReported = true;
+      logger.warn({ err: error }, 'redis unreachable, retrying in the background');
+    }
+  });
+
+  client.on('ready', () => {
+    if (outageReported) {
+      outageReported = false;
+      logger.info('redis connection restored');
+    }
+  });
+
   connections.add(client);
   return client;
 }
 
 export const redis = createRedisClient();
 
-export async function connectRedis(): Promise<Redis> {
-  await redis.connect();
-  logger.info('redis connected');
-  return redis;
+export async function connectRedis(): Promise<boolean> {
+  try {
+    await redis.connect();
+    logger.info('redis connected');
+    return true;
+  } catch {
+    logger.warn('starting without redis: caching, rate limit counters and queues fall back until it comes back');
+    return false;
+  }
 }
 
 export async function disconnectRedis(): Promise<void> {

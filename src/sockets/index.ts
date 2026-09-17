@@ -41,16 +41,18 @@ function errorMessage(error: unknown): string {
 }
 
 async function attachAdapter(io: Server): Promise<void> {
-  try {
-    const publisher = createRedisClient({ enableOfflineQueue: true });
-    const subscriber = publisher.duplicate();
+  const publisher = createRedisClient({ enableOfflineQueue: true });
+  const subscriber = createRedisClient({ enableOfflineQueue: true });
 
+  try {
     await Promise.all([publisher.connect(), subscriber.connect()]);
     io.adapter(createAdapter(publisher, subscriber));
 
     logger.info('socket.io redis adapter attached');
-  } catch (error) {
-    logger.warn({ err: error }, 'socket.io running without redis adapter, single instance only');
+  } catch {
+    publisher.disconnect();
+    subscriber.disconnect();
+    logger.warn('socket.io running without redis adapter, single instance only');
   }
 }
 
