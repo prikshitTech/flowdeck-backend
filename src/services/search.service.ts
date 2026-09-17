@@ -24,7 +24,12 @@ interface SearchFacet {
   total: number;
 }
 
-async function visibleChannelIds(workspaceId: string, userId: string) {
+async function visibleChannelIds(workspaceId: string, userId: string, unrestricted = false) {
+  if (unrestricted) {
+    const all = await Channel.find({ workspace: workspaceId, archivedAt: null }).select('_id').lean();
+    return all.map((row) => toObjectId(row._id));
+  }
+
   const [publicChannels, joined] = await Promise.all([
     Channel.find({ workspace: workspaceId, visibility: CHANNEL_VISIBILITY.PUBLIC, archivedAt: null })
       .select('_id')
@@ -102,7 +107,7 @@ function messageStage(workspaceId: Types.ObjectId, text: string, channelIds: Typ
   ];
 }
 
-export async function searchWorkspace(workspaceId: string, userId: string, query: SearchQuery) {
+export async function searchWorkspace(workspaceId: string, userId: string, query: SearchQuery, unrestricted = false) {
   const text = toTextQuery(query.q);
 
   if (!text) {
@@ -118,7 +123,7 @@ export async function searchWorkspace(workspaceId: string, userId: string, query
   }
 
   if (kinds.includes('message')) {
-    const channelIds = await visibleChannelIds(workspaceId, userId);
+    const channelIds = await visibleChannelIds(workspaceId, userId, unrestricted);
     unions.push({ $unionWith: { coll: 'messages', pipeline: messageStage(id, text, channelIds) } });
   }
 
@@ -154,7 +159,7 @@ export async function searchWorkspace(workspaceId: string, userId: string, query
   };
 }
 
-export async function suggest(workspaceId: string, userId: string, term: string) {
+export async function suggest(workspaceId: string, userId: string, term: string, unrestricted = false) {
   const pattern = prefixPattern(term);
   const id = toObjectId(workspaceId);
 
@@ -173,7 +178,7 @@ export async function suggest(workspaceId: string, userId: string, term: string)
       .lean()
   ]);
 
-  const visible = new Set((await visibleChannelIds(workspaceId, userId)).map(String));
+  const visible = new Set((await visibleChannelIds(workspaceId, userId, unrestricted)).map(String));
 
   return [
     ...pages.map((row) => ({ id: String(row._id), kind: 'page', label: row.title })),

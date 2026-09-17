@@ -1,4 +1,5 @@
 import asyncHandler from '../helpers/asyncHandler.js';
+import { isSuperAdmin } from '../helpers/access.js';
 import * as workspaceService from '../services/workspace.service.js';
 import { COMMON_MESSAGES, WORKSPACE_MESSAGES } from '../constants/messages.js';
 import { validQuery } from '../middlewares/validate.js';
@@ -11,7 +12,10 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await workspaceService.listWorkspaces(req.auth.userId, validQuery<ListWorkspacesQuery>(req));
+  const query = validQuery<ListWorkspacesQuery>(req);
+  const { items, pagination } = isSuperAdmin(req.auth.role)
+    ? await workspaceService.listEveryWorkspace(query)
+    : await workspaceService.listWorkspaces(req.auth.userId, query);
 
   res.list(items, pagination);
 });

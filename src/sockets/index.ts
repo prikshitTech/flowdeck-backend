@@ -10,6 +10,7 @@ import { assertCanRead } from '../services/channel.service.js';
 import { bindRealtime } from './emitter.js';
 import { corsOrigins } from '../config/env.js';
 import { createRedisClient } from '../config/redis.js';
+import { isSuperAdmin } from '../helpers/access.js';
 import { loadMembership } from '../middlewares/workspaceAccess.js';
 import { resolveAccessToken } from '../services/identity.service.js';
 
@@ -59,12 +60,13 @@ async function attachAdapter(io: Server): Promise<void> {
 function registerHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
     const userId: string = socket.data.userId;
+    const unrestricted: boolean = socket.data.unrestricted;
 
     socket.join(ROOM.user(userId));
     logger.debug({ userId, socket: socket.id }, 'socket connected');
 
     const guardWorkspace = async (workspaceId: string): Promise<boolean> => {
-      const membership = await loadMembership(workspaceId, userId);
+      const membership = unrestricted || (await loadMembership(workspaceId, userId));
 
       if (!membership) {
         socket.emit(SOCKET_EVENT.ERROR, { event: SOCKET_EVENT.WORKSPACE_JOIN, message: 'Not a member' });
@@ -88,7 +90,7 @@ function registerHandlers(io: Server): void {
 
     socket.on(SOCKET_EVENT.CHANNEL_JOIN, async ({ workspaceId, channelId }: ChannelRoomRequest) => {
       try {
-        await assertCanRead(workspaceId, channelId, userId);
+        await assertCanRead(workspaceId, channelId, userId, unrestricted);
         socket.join(ROOM.channel(channelId));
       } catch (error) {
         socket.emit(SOCKET_EVENT.ERROR, { event: SOCKET_EVENT.CHANNEL_JOIN, message: errorMessage(error) });
@@ -138,6 +140,7 @@ export async function createRealtimeServer(httpServer: HttpServer): Promise<Serv
 
       socket.data.userId = String(user._id);
       socket.data.name = user.name;
+      socket.data.unrestricted = isSuperAdmin(user.role);
       next();
     } catch (error) {
       next(new Error(errorMessage(error)));

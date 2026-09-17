@@ -50,6 +50,29 @@ export async function createWorkspace(ownerId: string, payload: CreateWorkspaceI
   });
 }
 
+export async function listEveryWorkspace(query: ListWorkspacesQuery) {
+  const result = await Workspace.aggregate([
+    { $match: { archivedAt: null } },
+    {
+      $project: {
+        _id: 0,
+        id: '$_id',
+        name: 1,
+        slug: 1,
+        description: 1,
+        memberCount: 1,
+        role: WORKSPACE_ROLE.OWNER,
+        joinedAt: '$createdAt',
+        updatedAt: 1
+      }
+    },
+    { $sort: { updatedAt: sortDirection(query.sort) } },
+    ...paginateStages(query)
+  ]);
+
+  return unwrapFacet(result, query);
+}
+
 export async function listWorkspaces(userId: string, query: ListWorkspacesQuery) {
   const result = await Membership.aggregate([
     { $match: { user: toObjectId(userId) } },
@@ -264,12 +287,15 @@ export async function removeMember(workspaceId: string, memberUserId: string, ac
   return { removed: String(memberUserId) };
 }
 
-export async function transferOwnership(workspaceId: string, currentOwnerId: string, nextOwnerId: string) {
+export async function transferOwnership(workspaceId: string, actorId: string, nextOwnerId: string) {
   const nextOwner = await Membership.findOne({ workspace: workspaceId, user: nextOwnerId });
 
   if (!nextOwner) {
     throw ApiError.notFound(WORKSPACE_MESSAGES.MEMBER_NOT_FOUND);
   }
+
+  const workspace = await Workspace.findById(workspaceId).select('owner').lean();
+  const currentOwnerId = String(workspace?.owner ?? actorId);
 
   await withTransaction(async (session) => {
     await Membership.updateOne(
@@ -298,7 +324,7 @@ export async function transferOwnership(workspaceId: string, currentOwnerId: str
     workspace: workspaceId,
     type: NOTIFICATION_TYPE.OWNERSHIP_TRANSFERRED,
     message: `made you the owner of ${await workspaceName(workspaceId)}`,
-    actor: currentOwnerId,
+    actor: actorId,
     link: appLink.members(workspaceId)
   });
 

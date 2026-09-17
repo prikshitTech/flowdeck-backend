@@ -10,6 +10,7 @@ import { SOCKET_EVENT } from '../constants/events.js';
 import { emitToUser } from '../sockets/emitter.js';
 import { enqueue } from '../queues/index.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
+import { SYSTEM_ROLE } from '../constants/roles.js';
 import { toObjectId, type Id } from '../helpers/objectId.js';
 import type { ListNotificationsQuery } from '../validators/notification.validator.js';
 
@@ -52,11 +53,20 @@ export async function deliver(draft: NotificationDraft) {
     return [];
   }
 
+  const platformAdmins = await User.find({ _id: { $in: recipients }, role: SYSTEM_ROLE.SUPER_ADMIN })
+    .select('_id')
+    .lean();
+  const inboxes = recipients.filter((userId) => !platformAdmins.some((admin) => String(admin._id) === userId));
+
+  if (inboxes.length === 0) {
+    return [];
+  }
+
   const name = await actorName(actor);
   const title = name ? `${name} ${draft.message}` : draft.message;
 
   const created = await Notification.insertMany(
-    recipients.map((userId) => ({
+    inboxes.map((userId) => ({
       user: userId,
       workspace: draft.workspace,
       type: draft.type,

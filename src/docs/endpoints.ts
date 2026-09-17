@@ -1,4 +1,5 @@
 import * as auth from '../validators/auth.validator.js';
+import * as admin from '../validators/admin.validator.js';
 import * as audit from '../validators/audit.validator.js';
 import * as board from '../validators/board.validator.js';
 import * as channel from '../validators/channel.validator.js';
@@ -36,11 +37,15 @@ export const TAGS = [
   { name: 'Analytics', description: 'Workspace and board reporting' },
   { name: 'Audit', description: 'Immutable record of every mutation' },
   { name: 'Notifications', description: 'Mentions, assignments and reminders' },
-  { name: 'System', description: 'Service health' }
+  { name: 'System', description: 'Service health' },
+  { name: 'Admin', description: 'One time super admin setup' }
 ];
 
 export const ENDPOINTS: Endpoint[] = [
   { method: 'get', path: '/health', tag: 'System', summary: 'Service health probe', auth: false },
+
+  { method: 'get', path: '/admin/setup', tag: 'Admin', summary: 'Whether the super admin seat is still open', auth: false },
+  { method: 'post', path: '/admin/setup', tag: 'Admin', summary: 'Claim the single super admin account', auth: false, schema: admin.superAdminSchema, ok: 201 },
 
   { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Create an account', auth: false, schema: auth.registerSchema, ok: 201 },
   { method: 'post', path: '/auth/login', tag: 'Auth', summary: 'Sign in and receive a token pair', auth: false, schema: auth.loginSchema },

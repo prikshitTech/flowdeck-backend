@@ -18,6 +18,7 @@ const schema = z.object({
   LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(300),
   IP_BLOCK_THRESHOLD: z.coerce.number().int().positive().default(25),
   IP_BLOCK_SECONDS: z.coerce.number().int().positive().default(1800),
+  SUPER_ADMIN_SETUP_KEY: z.string().default(''),
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().max(2048).default(50),
   RUN_WORKERS_IN_API: z

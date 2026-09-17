@@ -1,4 +1,5 @@
 import asyncHandler from '../helpers/asyncHandler.js';
+import { isSuperAdmin } from '../helpers/access.js';
 import * as channelService from '../services/channel.service.js';
 import { CHANNEL_MESSAGES, COMMON_MESSAGES } from '../constants/messages.js';
 import { validQuery } from '../middlewares/validate.js';
@@ -11,13 +12,23 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const list = asyncHandler(async (req, res) => {
-  const { items, pagination } = await channelService.listChannels(req.workspaceId, req.auth.userId, validQuery<ListChannelsQuery>(req));
+  const { items, pagination } = await channelService.listChannels(
+    req.workspaceId,
+    req.auth.userId,
+    validQuery<ListChannelsQuery>(req),
+    isSuperAdmin(req.auth.role)
+  );
 
   res.list(items, pagination);
 });
 
 export const detail = asyncHandler(async (req, res) => {
-  const channel = await channelService.getChannel(req.workspaceId, req.params.channelId, req.auth.userId);
+  const channel = await channelService.getChannel(
+    req.workspaceId,
+    req.params.channelId,
+    req.auth.userId,
+    isSuperAdmin(req.auth.role)
+  );
 
   res.ok(channel, COMMON_MESSAGES.FETCHED);
 });
@@ -40,7 +51,12 @@ export const archive = asyncHandler(async (req, res) => {
 });
 
 export const join = asyncHandler(async (req, res) => {
-  const result = await channelService.joinChannel(req.workspaceId, req.params.channelId, req.auth.userId);
+  const result = await channelService.joinChannel(
+    req.workspaceId,
+    req.params.channelId,
+    req.auth.userId,
+    isSuperAdmin(req.auth.role)
+  );
 
   res.ok(result, CHANNEL_MESSAGES.JOINED);
 });
@@ -62,7 +78,8 @@ export const messages = asyncHandler(async (req, res) => {
     req.workspaceId,
     req.params.channelId,
     req.auth.userId,
-    validQuery<ListMessagesQuery>(req)
+    validQuery<ListMessagesQuery>(req),
+    isSuperAdmin(req.auth.role)
   );
 
   res.list(items, cursor);

@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema<UserFields, UserModel, UserMethods>(
 
 userSchema.index({ name: 'text', email: 'text' }, { weights: { name: 4, email: 1 }, name: 'user_search_idx' });
 userSchema.index({ status: 1, createdAt: -1 });
+userSchema.index(
+  { role: 1 },
+  { unique: true, partialFilterExpression: { role: SYSTEM_ROLE.SUPER_ADMIN }, name: 'single_super_admin_idx' }
+);
 
 userSchema.pre('save', async function hashPassword() {
   if (!this.isModified('password')) {

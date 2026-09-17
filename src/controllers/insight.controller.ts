@@ -1,5 +1,6 @@
 import ApiError from '../helpers/apiError.js';
 import asyncHandler from '../helpers/asyncHandler.js';
+import { isSuperAdmin } from '../helpers/access.js';
 import * as analyticsService from '../services/analytics.service.js';
 import * as searchService from '../services/search.service.js';
 import { BOARD_MESSAGES, COMMON_MESSAGES, SEARCH_MESSAGES } from '../constants/messages.js';
@@ -10,14 +11,20 @@ export const search = asyncHandler(async (req, res) => {
   const { items, pagination, byKind } = await searchService.searchWorkspace(
     req.workspaceId,
     req.auth.userId,
-    validQuery<SearchQuery>(req)
+    validQuery<SearchQuery>(req),
+    isSuperAdmin(req.auth.role)
   );
 
   res.list(items, { ...pagination, byKind }, SEARCH_MESSAGES.RESULTS);
 });
 
 export const suggest = asyncHandler(async (req, res) => {
-  const suggestions = await searchService.suggest(req.workspaceId, req.auth.userId, validQuery<{ q: string }>(req).q);
+  const suggestions = await searchService.suggest(
+    req.workspaceId,
+    req.auth.userId,
+    validQuery<{ q: string }>(req).q,
+    isSuperAdmin(req.auth.role)
+  );
 
   res.ok(suggestions, SEARCH_MESSAGES.SUGGESTIONS);
 });

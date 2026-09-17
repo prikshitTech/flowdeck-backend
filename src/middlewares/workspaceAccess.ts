@@ -4,7 +4,8 @@ import Membership from '../models/membership.model.js';
 import type { MembershipContext } from '../types/express.js';
 import { CACHE_TTL } from '../constants/cacheKeys.js';
 import { WORKSPACE_MESSAGES } from '../constants/messages.js';
-import { WORKSPACE_ROLE_RANK, type WorkspaceRole } from '../constants/roles.js';
+import { WORKSPACE_ROLE, WORKSPACE_ROLE_RANK, type WorkspaceRole } from '../constants/roles.js';
+import { isSuperAdmin } from '../helpers/access.js';
 import { drop, remember } from '../services/cache.service.js';
 
 const membershipKey = (workspaceId: string, userId: string) => `cache:membership:${workspaceId}:${userId}`;
@@ -31,7 +32,9 @@ export function requireWorkspaceRole(minimumRole: WorkspaceRole) {
       throw ApiError.badRequest('A workspace identifier is required');
     }
 
-    const membership = await loadMembership(workspaceId, req.auth.userId);
+    const membership = isSuperAdmin(req.auth.role)
+      ? { role: WORKSPACE_ROLE.OWNER, workspace: String(workspaceId) }
+      : await loadMembership(workspaceId, req.auth.userId);
 
     if (!membership) {
       throw ApiError.forbidden(WORKSPACE_MESSAGES.NOT_A_MEMBER);

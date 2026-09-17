@@ -43,19 +43,19 @@ async function loadChannel(workspaceId: string, channelId: string) {
   return channel;
 }
 
-export async function assertCanRead(workspaceId: string, channelId: string, userId: string) {
+export async function assertCanRead(workspaceId: string, channelId: string, userId: string, unrestricted = false) {
   const channel = await loadChannel(workspaceId, channelId);
   const membership = await ChannelMember.findOne({ channel: channel._id, user: userId }).lean();
 
-  if (channel.visibility === CHANNEL_VISIBILITY.PRIVATE && !membership) {
+  if (channel.visibility === CHANNEL_VISIBILITY.PRIVATE && !membership && !unrestricted) {
     throw ApiError.forbidden(CHANNEL_MESSAGES.PRIVATE_ACCESS);
   }
 
   return { channel, membership };
 }
 
-async function assertCanPost(workspaceId: string, channelId: string, userId: string) {
-  const { channel, membership } = await assertCanRead(workspaceId, channelId, userId);
+async function assertCanPost(workspaceId: string, channelId: string, userId: string, unrestricted = false) {
+  const { channel, membership } = await assertCanRead(workspaceId, channelId, userId, unrestricted);
 
   if (!membership) {
     throw ApiError.forbidden(CHANNEL_MESSAGES.NOT_JOINED);
@@ -90,13 +90,18 @@ export async function createChannel(workspaceId: string, authorId: string, paylo
   return channel;
 }
 
-export async function listChannels(workspaceId: string, userId: string, query: ListChannelsQuery) {
+export async function listChannels(
+  workspaceId: string,
+  userId: string,
+  query: ListChannelsQuery,
+  unrestricted = false
+) {
   const match: Match = { workspace: toObjectId(workspaceId), archivedAt: null };
 
   if (query.mine) {
     const joined = await ChannelMember.find({ workspace: workspaceId, user: userId }).select('channel').lean();
     match._id = { $in: joined.map((row) => row.channel) };
-  } else {
+  } else if (!unrestricted) {
     match.$or = [
       { visibility: CHANNEL_VISIBILITY.PUBLIC },
       { _id: { $in: await joinedChannelIds(workspaceId, userId) } }
@@ -144,8 +149,8 @@ async function joinedChannelIds(workspaceId: string, userId: string) {
   return rows.map((row) => row.channel);
 }
 
-export async function getChannel(workspaceId: string, channelId: string, userId: string) {
-  const { channel, membership } = await assertCanRead(workspaceId, channelId, userId);
+export async function getChannel(workspaceId: string, channelId: string, userId: string, unrestricted = false) {
+  const { channel, membership } = await assertCanRead(workspaceId, channelId, userId, unrestricted);
   const unread = membership?.lastReadAt
     ? await Message.countDocuments({
         channel: channel._id,
@@ -180,10 +185,10 @@ export async function archiveChannel(workspaceId: string, channelId: string) {
   return { archived: String(channel._id) };
 }
 
-export async function joinChannel(workspaceId: string, channelId: string, userId: string) {
+export async function joinChannel(workspaceId: string, channelId: string, userId: string, unrestricted = false) {
   const channel = await loadChannel(workspaceId, channelId);
 
-  if (channel.visibility === CHANNEL_VISIBILITY.PRIVATE) {
+  if (channel.visibility === CHANNEL_VISIBILITY.PRIVATE && !unrestricted) {
     throw ApiError.forbidden(CHANNEL_MESSAGES.PRIVATE_ACCESS);
   }
 
@@ -234,8 +239,14 @@ export async function markRead(workspaceId: string, channelId: string, userId: s
   return { channel: String(channel._id), unread: 0 };
 }
 
-export async function listMessages(workspaceId: string, channelId: string, userId: string, query: ListMessagesQuery) {
-  const { channel } = await assertCanRead(workspaceId, channelId, userId);
+export async function listMessages(
+  workspaceId: string,
+  channelId: string,
+  userId: string,
+  query: ListMessagesQuery,
+  unrestricted = false
+) {
+  const { channel } = await assertCanRead(workspaceId, channelId, userId, unrestricted);
 
   const filter: Match = { channel: channel._id, deletedAt: null, parent: query.parent ?? null };
 

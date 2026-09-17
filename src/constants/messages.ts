@@ -104,6 +104,13 @@ export const CHANNEL_MESSAGES = {
   REACTION_UPDATED: 'Reaction updated'
 } as const;
 
+export const ADMIN_MESSAGES = {
+  CREATED: 'Super admin account created',
+  ALREADY_CLAIMED: 'A super admin already exists for this deployment',
+  SETUP_KEY_WRONG: 'That setup key is not valid',
+  EMAIL_TAKEN: 'An account with this email already exists'
+} as const;
+
 export const NOTIFICATION_MESSAGES = {
   NOT_FOUND: 'Notification not found',
   MARKED_READ: 'Notification marked as read',
