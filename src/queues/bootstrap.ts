@@ -5,7 +5,7 @@ import handleMaintenanceJob from './workers/maintenance.worker.js';
 import handleNotificationJob from './workers/notification.worker.js';
 import logger from '../config/logger.js';
 import { JOB, QUEUE, REPEATABLE, type QueueName } from '../constants/queues.js';
-import { closeQueues, enqueue, queueConnection, scheduleRepeatable } from './index.js';
+import { closeQueues, enqueue, markConsumersRunning, queueConnection, scheduleRepeatable } from './index.js';
 import { persist, useAuditSink } from '../services/audit.service.js';
 
 const WORKER_CONCURRENCY = 5;
@@ -35,6 +35,7 @@ export function startWorkers(): Worker[] {
     workers.push(worker);
   }
 
+  markConsumersRunning(true);
   logger.info(`${workers.length} queue workers started`);
   return workers;
 }
@@ -48,5 +49,6 @@ export async function scheduleRecurringJobs(): Promise<void> {
 export async function stopWorkers(): Promise<void> {
   await Promise.allSettled(workers.map((worker) => worker.close()));
   workers.length = 0;
+  markConsumersRunning(false);
   await closeQueues();
 }

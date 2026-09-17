@@ -1,6 +1,7 @@
 import { Queue, type RepeatOptions } from 'bullmq';
 
 import logger from '../config/logger.js';
+import env from '../config/env.js';
 import { createRedisClient, redis } from '../config/redis.js';
 import { JOB_DEFAULTS, QUEUE, type QueueName } from '../constants/queues.js';
 
@@ -9,6 +10,12 @@ interface EnqueueOptions<T> {
 }
 
 const queues = new Map<QueueName, Queue>();
+
+let consumersRunning = !env.RUN_WORKERS_IN_API;
+
+export function markConsumersRunning(running: boolean): void {
+  consumersRunning = running;
+}
 
 export function queueConnection() {
   return createRedisClient({ maxRetriesPerRequest: null, enableOfflineQueue: false });
@@ -38,6 +45,10 @@ export async function enqueue<T>(
   try {
     if (redis.status !== 'ready') {
       throw new Error('redis is not connected');
+    }
+
+    if (!consumersRunning) {
+      throw new Error('no queue workers are running to pick the job up');
     }
 
     await queueFor(name).add(jobName, payload);
