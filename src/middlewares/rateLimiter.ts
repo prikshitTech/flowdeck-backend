@@ -1,6 +1,7 @@
+import type { RequestHandler } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 
-import env from '../config/env.js';
+import env, { isTest } from '../config/env.js';
 import RateLimitStore from '../helpers/rateLimitStore.js';
 import { ERROR_CODE, HTTP_STATUS } from '../constants/statusCodes.js';
 
@@ -11,7 +12,13 @@ interface LimiterOptions {
   byUser?: boolean;
 }
 
-export function createRateLimiter({ name, windowSeconds, max, byUser = false }: LimiterOptions) {
+const allowEveryRequest: RequestHandler = (_req, _res, next) => next();
+
+export function createRateLimiter({ name, windowSeconds, max, byUser = false }: LimiterOptions): RequestHandler {
+  if (isTest) {
+    return allowEveryRequest;
+  }
+
   return rateLimit({
     windowMs: windowSeconds * 1000,
     limit: max,
