@@ -1,4 +1,5 @@
 import { buildMeta, sortDirection, toSkip } from '../src/helpers/pagination.js';
+import { cacheKey } from '../src/constants/cacheKeys.js';
 import { clientKey } from '../src/helpers/network.js';
 import { escapeForPattern, prefixPattern, toTextQuery } from '../src/helpers/search.js';
 import { parseRange } from '../src/helpers/range.js';
@@ -101,5 +102,16 @@ describe('presentation helper', () => {
     expect(withId(null)).toBeNull();
     expect(withId('plain')).toBe('plain');
     expect(withId({ name: 'no id' })).toEqual({ name: 'no id' });
+  });
+});
+
+describe('cache keys', () => {
+  it('keeps every workspace scoped cache entry under the tag writes clear', () => {
+    const tag = cacheKey.workspaceTag('ws1');
+
+    expect(cacheKey.boardSnapshot('ws1', 'b1').startsWith(tag)).toBe(true);
+    expect(cacheKey.pageTree('ws1').startsWith(tag)).toBe(true);
+    expect(cacheKey.workspaceSummary('ws1').startsWith(tag)).toBe(true);
+    expect(cacheKey.workspaceAnalytics('ws1', 30).startsWith(tag)).toBe(true);
   });
 });

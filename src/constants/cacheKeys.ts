@@ -11,7 +11,7 @@ export const cacheKey = {
   workspaceSummary: (workspaceId: string) => `cache:workspace:${workspaceId}:summary`,
   workspaceMembers: (workspaceId: string) => `cache:workspace:${workspaceId}:members`,
   pageTree: (workspaceId: string) => `cache:workspace:${workspaceId}:pages`,
-  boardSnapshot: (boardId: string) => `cache:board:${boardId}`,
+  boardSnapshot: (workspaceId: string, boardId: string) => `cache:workspace:${workspaceId}:board:${boardId}`,
   workspaceAnalytics: (workspaceId: string, range: string | number) => `cache:workspace:${workspaceId}:analytics:${range}`,
   workspaceTag: (workspaceId: string) => `cache:workspace:${workspaceId}`
 };

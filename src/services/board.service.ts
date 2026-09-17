@@ -137,7 +137,7 @@ export async function listBoards(workspaceId: string, query: ListBoardsQuery) {
 export async function boardSnapshot(workspaceId: string, boardId: string) {
   await loadBoard(workspaceId, boardId);
 
-  return remember(cacheKey.boardSnapshot(boardId), CACHE_TTL.SHORT, async () => {
+  return remember(cacheKey.boardSnapshot(workspaceId, boardId), CACHE_TTL.SHORT, async () => {
     const [board] = await Board.aggregate([
       { $match: { _id: toObjectId(boardId) } },
       {
