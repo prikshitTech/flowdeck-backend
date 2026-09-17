@@ -79,6 +79,7 @@ export const updateCard = asyncHandler(async (req, res) => {
     req.workspaceId,
     req.params.boardId,
     req.params.cardId,
+    req.auth.userId,
     req.body
   );
 
@@ -90,6 +91,7 @@ export const moveCard = asyncHandler(async (req, res) => {
     req.workspaceId,
     req.params.boardId,
     req.params.cardId,
+    req.auth.userId,
     req.body
   );
 
@@ -97,7 +99,7 @@ export const moveCard = asyncHandler(async (req, res) => {
 });
 
 export const archiveCard = asyncHandler(async (req, res) => {
-  const result = await boardService.archiveCard(req.workspaceId, req.params.boardId, req.params.cardId);
+  const result = await boardService.archiveCard(req.workspaceId, req.params.boardId, req.params.cardId, req.auth.userId);
 
   res.ok(result, BOARD_MESSAGES.CARD_ARCHIVED);
 });

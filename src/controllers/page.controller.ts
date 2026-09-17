@@ -47,7 +47,7 @@ export const reorder = asyncHandler(async (req, res) => {
 });
 
 export const archive = asyncHandler(async (req, res) => {
-  const result = await pageService.archivePage(req.workspaceId, req.params.pageId);
+  const result = await pageService.archivePage(req.workspaceId, req.params.pageId, req.auth.userId);
 
   res.ok(result, PAGE_MESSAGES.ARCHIVED);
 });

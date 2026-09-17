@@ -12,6 +12,7 @@ const notificationSchema = new mongoose.Schema(
     entityType: { type: String, default: null },
     entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
     actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    link: { type: String, default: null },
     readAt: { type: Date, default: null }
   },
   { timestamps: { createdAt: true, updatedAt: false } }

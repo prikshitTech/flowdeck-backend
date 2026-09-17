@@ -21,10 +21,17 @@ import type {
   UpdateWorkspaceInput
 } from '../validators/workspace.validator.js';
 import { toObjectId } from '../helpers/objectId.js';
+import { NOTIFICATION_TYPE, appLink } from '../constants/notifications.js';
+import { notify } from './notification.service.js';
 
 
 function invalidateWorkspace(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
+}
+
+async function workspaceName(workspaceId: string): Promise<string> {
+  const workspace = await Workspace.findById(workspaceId).select('name').lean();
+  return workspace?.name ?? 'a workspace';
 }
 
 export async function createWorkspace(ownerId: string, payload: CreateWorkspaceInput) {
@@ -164,10 +171,20 @@ export async function addMember(workspaceId: string, actorId: string, { email, r
   });
 
   await invalidateWorkspace(workspaceId);
+
+  await notify({
+    recipients: [String(account._id)],
+    workspace: workspaceId,
+    type: NOTIFICATION_TYPE.MEMBER_ADDED,
+    message: `added you to ${await workspaceName(workspaceId)} as ${role}`,
+    actor: actorId,
+    link: appLink.workspace(workspaceId)
+  });
+
   return { membership, account };
 }
 
-export async function updateMemberRole(workspaceId: string, memberUserId: string, role: WorkspaceRole) {
+export async function updateMemberRole(workspaceId: string, memberUserId: string, role: WorkspaceRole, actorId: string) {
   if (role === WORKSPACE_ROLE.OWNER) {
     throw ApiError.badRequest(WORKSPACE_MESSAGES.OWNER_ROLE_LOCKED);
   }
@@ -182,14 +199,27 @@ export async function updateMemberRole(workspaceId: string, memberUserId: string
     throw ApiError.badRequest(WORKSPACE_MESSAGES.OWNER_ROLE_LOCKED);
   }
 
+  const previousRole = membership.role;
   membership.role = role;
   await membership.save();
 
   await Promise.all([forgetMembership(workspaceId, memberUserId), invalidateWorkspace(workspaceId)]);
+
+  if (previousRole !== role) {
+    await notify({
+      recipients: [memberUserId],
+      workspace: workspaceId,
+      type: NOTIFICATION_TYPE.MEMBER_ROLE_CHANGED,
+      message: `changed your role in ${await workspaceName(workspaceId)} from ${previousRole} to ${role}`,
+      actor: actorId,
+      link: appLink.members(workspaceId)
+    });
+  }
+
   return membership;
 }
 
-export async function removeMember(workspaceId: string, memberUserId: string) {
+export async function removeMember(workspaceId: string, memberUserId: string, actorId: string) {
   const membership = await Membership.findOne({ workspace: workspaceId, user: memberUserId });
 
   if (!membership) {
@@ -206,6 +236,31 @@ export async function removeMember(workspaceId: string, memberUserId: string) {
   });
 
   await Promise.all([forgetMembership(workspaceId, memberUserId), invalidateWorkspace(workspaceId)]);
+
+  const name = await workspaceName(workspaceId);
+
+  if (String(actorId) === String(memberUserId)) {
+    const workspace = await Workspace.findById(workspaceId).select('owner').lean();
+
+    await notify({
+      recipients: workspace ? [String(workspace.owner)] : [],
+      workspace: workspaceId,
+      type: NOTIFICATION_TYPE.MEMBER_LEFT,
+      message: `left ${name}`,
+      actor: actorId,
+      link: appLink.members(workspaceId)
+    });
+  } else {
+    await notify({
+      recipients: [memberUserId],
+      workspace: workspaceId,
+      type: NOTIFICATION_TYPE.MEMBER_REMOVED,
+      message: `removed you from ${name}`,
+      actor: actorId,
+      link: appLink.home()
+    });
+  }
+
   return { removed: String(memberUserId) };
 }
 
@@ -238,6 +293,15 @@ export async function transferOwnership(workspaceId: string, currentOwnerId: str
     invalidateWorkspace(workspaceId)
   ]);
 
+  await notify({
+    recipients: [nextOwnerId],
+    workspace: workspaceId,
+    type: NOTIFICATION_TYPE.OWNERSHIP_TRANSFERRED,
+    message: `made you the owner of ${await workspaceName(workspaceId)}`,
+    actor: currentOwnerId,
+    link: appLink.members(workspaceId)
+  });
+
   return { workspace: String(workspaceId), owner: String(nextOwnerId) };
 }
 
@@ -252,5 +316,5 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
     throw ApiError.badRequest(WORKSPACE_MESSAGES.OWNER_CANNOT_LEAVE);
   }
 
-  return removeMember(workspaceId, userId);
+  return removeMember(workspaceId, userId, userId);
 }

@@ -21,6 +21,9 @@ import type {
   UpdatePageInput
 } from '../validators/page.validator.js';
 import { toObjectId } from '../helpers/objectId.js';
+import { AUDIT_ENTITY } from '../constants/audit.js';
+import { NOTIFICATION_TYPE, appLink } from '../constants/notifications.js';
+import { notify } from './notification.service.js';
 
 type Match = Record<string, unknown>;
 
@@ -200,6 +203,17 @@ export async function updatePage(workspaceId: string, pageId: string, editorId: 
     version: updated.version
   });
 
+  await notify({
+    recipients: [String(updated.createdBy)],
+    workspace: workspaceId,
+    type: NOTIFICATION_TYPE.PAGE_EDITED,
+    message: `edited your page "${updated.title}"`,
+    actor: editorId,
+    entityType: AUDIT_ENTITY.PAGE,
+    entityId: String(updated._id),
+    link: appLink.page(workspaceId, String(updated._id))
+  });
+
   return updated;
 }
 
@@ -254,7 +268,7 @@ export async function reorderPages(workspaceId: string, entries: ReorderPagesInp
   return { reordered: entries.length };
 }
 
-export async function archivePage(workspaceId: string, pageId: string) {
+export async function archivePage(workspaceId: string, pageId: string, actorId: string) {
   const page = await loadPage(workspaceId, pageId);
   const archivedAt = new Date();
 
@@ -269,6 +283,18 @@ export async function archivePage(workspaceId: string, pageId: string) {
   });
 
   await invalidate(workspaceId);
+
+  await notify({
+    recipients: [String(page.createdBy)],
+    workspace: workspaceId,
+    type: NOTIFICATION_TYPE.PAGE_ARCHIVED,
+    message: `archived your page "${page.title}"`,
+    actor: actorId,
+    entityType: AUDIT_ENTITY.PAGE,
+    entityId: String(page._id),
+    link: appLink.workspace(workspaceId)
+  });
+
   return { archived: affected };
 }
 

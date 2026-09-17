@@ -8,11 +8,11 @@ import { ALLOWED_REACTIONS, CHANNEL_VISIBILITY } from '../constants/channel.js';
 import { CHANNEL_MESSAGES } from '../constants/messages.js';
 import { dropByPrefix } from './cache.service.js';
 import { cacheKey } from '../constants/cacheKeys.js';
-import { JOB, QUEUE } from '../constants/queues.js';
 import { SOCKET_EVENT } from '../constants/events.js';
 import { emitToChannel } from '../sockets/emitter.js';
-import { enqueue } from '../queues/index.js';
-import { fanOutMention } from './notification.service.js';
+import { AUDIT_ENTITY } from '../constants/audit.js';
+import { NOTIFICATION_TYPE, appLink } from '../constants/notifications.js';
+import { notify } from './notification.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { slugify } from '../helpers/slug.js';
 import { withId, withIds } from '../helpers/present.js';
@@ -297,12 +297,17 @@ export async function sendMessage(workspaceId: string, channelId: string, author
   emitToChannel(channel._id, SOCKET_EVENT.MESSAGE_CREATED, message.toJSON());
 
   if (message.mentions.length > 0) {
-    await enqueue(
-      QUEUE.NOTIFICATION,
-      JOB.MENTION_FAN_OUT,
-      { messageId: String(message._id) },
-      { runInline: fanOutMention }
-    );
+    await notify({
+      recipients: message.mentions.map(String),
+      workspace: workspaceId,
+      type: NOTIFICATION_TYPE.MENTION,
+      message: `mentioned you in #${channel.name}`,
+      body: message.body,
+      actor: authorId,
+      entityType: AUDIT_ENTITY.MESSAGE,
+      entityId: String(message._id),
+      link: appLink.channel(workspaceId, String(channel._id))
+    });
   }
 
   return message;

@@ -6,8 +6,7 @@ export const QUEUE = {
 
 export const JOB = {
   AUDIT_ENTRY: 'audit.entry',
-  MENTION_FAN_OUT: 'notification.mention',
-  CARD_ASSIGNED: 'notification.card_assigned',
+  DELIVER_NOTIFICATION: 'notification.deliver',
   DUE_SOON_SWEEP: 'maintenance.due_soon',
   PURGE_ARCHIVED: 'maintenance.purge_archived'
 } as const;

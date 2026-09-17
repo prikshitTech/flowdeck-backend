@@ -7,11 +7,11 @@ import Membership from '../models/membership.model.js';
 import { BOARD_MESSAGES } from '../constants/messages.js';
 import { CACHE_TTL, cacheKey } from '../constants/cacheKeys.js';
 import { DEFAULT_LISTS } from '../constants/board.js';
-import { JOB, QUEUE } from '../constants/queues.js';
 import { SOCKET_EVENT } from '../constants/events.js';
 import { emitToBoard } from '../sockets/emitter.js';
-import { enqueue } from '../queues/index.js';
-import { fanOutAssignment } from './notification.service.js';
+import { AUDIT_ENTITY } from '../constants/audit.js';
+import { NOTIFICATION_TYPE, appLink } from '../constants/notifications.js';
+import { notify } from './notification.service.js';
 import { dropByPrefix, remember } from './cache.service.js';
 import { paginateStages, sortDirection, unwrapFacet } from '../helpers/pagination.js';
 import { withTransaction } from '../helpers/transaction.js';
@@ -30,6 +30,48 @@ import type {
 import { toObjectId } from '../helpers/objectId.js';
 
 type Match = Record<string, unknown>;
+
+interface CardFacts {
+  _id: unknown;
+  title: string;
+  assignees: unknown[];
+  createdBy: unknown;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  title: 'title',
+  description: 'description',
+  priority: 'priority',
+  dueAt: 'due date',
+  labels: 'labels'
+};
+
+function cardWatchers(card: CardFacts): string[] {
+  return [...card.assignees.map(String), String(card.createdBy)];
+}
+
+function notifyAboutCard(
+  workspaceId: string,
+  boardId: string,
+  card: CardFacts,
+  actorId: string,
+  type: (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE],
+  message: string,
+  recipients: string[] = cardWatchers(card),
+  body: string = card.title
+) {
+  return notify({
+    recipients,
+    workspace: workspaceId,
+    type,
+    message,
+    body,
+    actor: actorId,
+    entityType: AUDIT_ENTITY.CARD,
+    entityId: String(card._id),
+    link: appLink.board(workspaceId, boardId)
+  });
+}
 
 function invalidate(workspaceId: string) {
   return dropByPrefix(cacheKey.workspaceTag(workspaceId));
@@ -269,46 +311,86 @@ export async function createCard(workspaceId: string, boardId: string, authorId:
   });
 
   await invalidate(workspaceId);
-  await announceAssignment(card, authorId, payload.assignees);
+
+  if (payload.assignees?.length) {
+    await notifyAboutCard(workspaceId, boardId, card, authorId, NOTIFICATION_TYPE.CARD_ASSIGNED, `assigned you "${card.title}"`, payload.assignees);
+  }
 
   emitToBoard(boardId, SOCKET_EVENT.CARD_CREATED, card.toJSON());
 
   return card;
 }
 
-async function announceAssignment(card: { _id: unknown }, actorId: string, assignees: string[] | undefined) {
-  if (!assignees?.length) {
-    return;
-  }
-
-  await enqueue(
-    QUEUE.NOTIFICATION,
-    JOB.CARD_ASSIGNED,
-    { cardId: String(card._id), actorId: String(actorId), assignees: assignees.map(String) },
-    { runInline: fanOutAssignment }
-  );
-}
-
-export async function updateCard(workspaceId: string, boardId: string, cardId: string, payload: UpdateCardInput) {
+export async function updateCard(
+  workspaceId: string,
+  boardId: string,
+  cardId: string,
+  actorId: string,
+  { completed, ...changes }: UpdateCardInput
+) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
-  await assertMembers(workspaceId, payload.assignees);
+  await assertMembers(workspaceId, changes.assignees);
 
-  if (payload.completed !== undefined) {
-    card.completedAt = payload.completed ? new Date() : null;
-    delete payload.completed;
+  const assignedBefore = new Set(card.assignees.map(String));
+  const wasDone = Boolean(card.completedAt);
+
+  if (completed !== undefined && completed !== wasDone) {
+    card.completedAt = completed ? new Date() : null;
   }
 
-  card.set(payload);
+  card.set(changes);
+
+  const changedFields = card
+    .modifiedPaths()
+    .filter((path) => FIELD_LABELS[path])
+    .map((path) => FIELD_LABELS[path]);
+
   await card.save();
 
   await invalidate(workspaceId);
   emitToBoard(boardId, SOCKET_EVENT.CARD_UPDATED, card.toJSON());
 
+  const assignedNow = card.assignees.map(String);
+  const added = assignedNow.filter((userId) => !assignedBefore.has(userId));
+  const removed = [...assignedBefore].filter((userId) => !assignedNow.includes(userId));
+
+  if (added.length > 0) {
+    await notifyAboutCard(workspaceId, boardId, card, actorId, NOTIFICATION_TYPE.CARD_ASSIGNED, `assigned you "${card.title}"`, added);
+  }
+
+  if (removed.length > 0) {
+    await notifyAboutCard(workspaceId, boardId, card, actorId, NOTIFICATION_TYPE.CARD_UNASSIGNED, `removed you from "${card.title}"`, removed);
+  }
+
+  if (Boolean(card.completedAt) !== wasDone) {
+    const type = card.completedAt ? NOTIFICATION_TYPE.CARD_COMPLETED : NOTIFICATION_TYPE.CARD_REOPENED;
+    const verb = card.completedAt ? `marked "${card.title}" as done` : `reopened "${card.title}"`;
+    await notifyAboutCard(workspaceId, boardId, card, actorId, type, verb);
+  }
+
+  if (changedFields.length > 0) {
+    await notifyAboutCard(
+      workspaceId,
+      boardId,
+      card,
+      actorId,
+      NOTIFICATION_TYPE.CARD_UPDATED,
+      `changed the ${changedFields.join(', ')} of "${card.title}"`,
+      cardWatchers(card).filter((userId) => !added.includes(userId))
+    );
+  }
+
   return card;
 }
 
-export async function moveCard(workspaceId: string, boardId: string, cardId: string, { list: targetListId, position }: MoveCardInput) {
+export async function moveCard(
+  workspaceId: string,
+  boardId: string,
+  cardId: string,
+  actorId: string,
+  { list: targetListId, position }: MoveCardInput
+) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
   const target = await loadList(boardId, targetListId ?? card.list);
@@ -348,10 +430,25 @@ export async function moveCard(workspaceId: string, boardId: string, cardId: str
     from: String(sourceListId)
   });
 
+  if (!sameList) {
+    const source = await BoardList.findById(sourceListId).select('name').lean();
+
+    await notifyAboutCard(
+      workspaceId,
+      boardId,
+      card,
+      actorId,
+      NOTIFICATION_TYPE.CARD_MOVED,
+      `moved "${card.title}" to ${target.name}`,
+      cardWatchers(card),
+      `From ${source?.name ?? 'another list'} to ${target.name}`
+    );
+  }
+
   return card;
 }
 
-export async function archiveCard(workspaceId: string, boardId: string, cardId: string) {
+export async function archiveCard(workspaceId: string, boardId: string, cardId: string, actorId: string) {
   await loadBoard(workspaceId, boardId);
   const card = await loadCard(boardId, cardId);
 
@@ -366,6 +463,7 @@ export async function archiveCard(workspaceId: string, boardId: string, cardId: 
 
   await invalidate(workspaceId);
   emitToBoard(boardId, SOCKET_EVENT.CARD_ARCHIVED, { id: String(card._id), list: String(card.list) });
+  await notifyAboutCard(workspaceId, boardId, card, actorId, NOTIFICATION_TYPE.CARD_ARCHIVED, `archived "${card.title}"`);
 
   return { archived: String(card._id) };
 }

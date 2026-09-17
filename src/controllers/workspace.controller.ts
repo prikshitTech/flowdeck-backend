@@ -47,13 +47,18 @@ export const addMember = asyncHandler(async (req, res) => {
 });
 
 export const updateMember = asyncHandler(async (req, res) => {
-  const membership = await workspaceService.updateMemberRole(req.workspaceId, req.params.memberId, req.body.role);
+  const membership = await workspaceService.updateMemberRole(
+    req.workspaceId,
+    req.params.memberId,
+    req.body.role,
+    req.auth.userId
+  );
 
   res.ok(membership, WORKSPACE_MESSAGES.MEMBER_UPDATED);
 });
 
 export const removeMember = asyncHandler(async (req, res) => {
-  const result = await workspaceService.removeMember(req.workspaceId, req.params.memberId);
+  const result = await workspaceService.removeMember(req.workspaceId, req.params.memberId, req.auth.userId);
 
   res.ok(result, WORKSPACE_MESSAGES.MEMBER_REMOVED);
 });
