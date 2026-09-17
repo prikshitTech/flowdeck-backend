@@ -63,6 +63,7 @@ queued jobs run inline, which is the same path production takes during a Redis o
 | `LOGIN_LOCK_SECONDS` | `300` | Lockout length |
 | `IP_BLOCK_THRESHOLD` | `25` | Failures before the address itself is blocked |
 | `MAX_UPLOAD_MB` | `50` | Rejected mid-stream, not after buffering |
+| `SUPER_ADMIN_SETUP_KEY` | empty | When set, the super admin setup page also asks for this key |
 | `RUN_WORKERS_IN_API` | `true` | Set false when running the worker separately |
 
 Startup validates all of these with zod and refuses to boot on a bad value, so a typo in a
@@ -109,6 +110,15 @@ validation and duplicate key errors into the same shape with a machine readable 
 The one deliberate exception is file download, which streams bytes rather than an envelope.
 
 ## Decisions worth explaining
+
+**One super admin, claimed once.** `POST /api/v1/admin/setup` creates the single platform
+admin and only works while no super admin exists; `GET /api/v1/admin/setup` reports whether
+the seat is still open. A unique partial index on the user role means two simultaneous
+requests cannot both win, and `SUPER_ADMIN_SETUP_KEY` can gate the page on a deployment that
+is public before anyone claims it. The super admin is granted owner rights in every
+workspace by the same guard everyone else goes through, sees every workspace in the listing,
+reads private channels and audit logs without membership, and is skipped when notifications
+are delivered.
 
 **Refresh tokens rotate, and replay kills the family.** A refresh token is a JWT whose
 sha256 is stored server side. Using one revokes it and issues a replacement in the same
@@ -167,6 +177,7 @@ everything outside the public auth routes answers 401 without a token.
 - bcrypt at 12 rounds, password never selected by default
 - Short-lived access tokens, rotating refresh tokens with replay detection
 - Four workspace roles ranked owner > admin > member > viewer, enforced by one middleware
+- A single super admin above those roles, created once through a setup endpoint that then closes
 - Login lockout per account and per address, then an outright block for a persistent address
 - Per-route rate limits: tighter on auth, uploads and search than on ordinary reads
 - helmet, CORS allow list, `express-mongo-sanitize`, `hpp`, 1MB body cap
