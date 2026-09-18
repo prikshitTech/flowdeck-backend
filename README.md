@@ -197,3 +197,4 @@ everything outside the public auth routes answers 401 without a token.
 | `npm run worker` | Queue workers only, from `dist` |
 | `npm test` | Jest against an in-memory replica set |
 | `npm run test:coverage` | The same with a coverage report |
+ 
